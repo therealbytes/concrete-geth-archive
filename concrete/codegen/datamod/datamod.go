@@ -83,6 +83,7 @@ func (s *StorageStruct) SetField(index int, data []byte) {
 
 type FieldSchema struct {
 	Name  string
+	Title string
 	Index int
 	Type  FieldType
 }
@@ -117,6 +118,15 @@ func lowerFirstLetter(str string) string {
 	return string(runes)
 }
 
+func upperFirstLetter(str string) string {
+	if len(str) == 0 {
+		return ""
+	}
+	runes := []rune(str)
+	runes[0] = unicode.ToUpper(runes[0])
+	return string(runes)
+}
+
 func isValidName(name string) bool {
 	if len(name) == 0 {
 		return false
@@ -134,7 +144,8 @@ func newFieldSchema(name string, index int, typeStr string) (FieldSchema, error)
 		return FieldSchema{}, fmt.Errorf("invalid type: %s", typeStr)
 	}
 	return FieldSchema{
-		Name:  name,
+		Name:  lowerFirstLetter(name),
+		Title: upperFirstLetter(name),
 		Index: index,
 		Type:  fieldType,
 	}, nil
@@ -161,7 +172,7 @@ func GenerateDataModel(config Config) error {
 		if !isValidName(name) {
 			return fmt.Errorf("invalid name: %s", name)
 		}
-		newMapping := MappingSchema{Name: name}
+		newMapping := MappingSchema{Name: upperFirstLetter(name)}
 		for keyName, keyType := range mapping.KeySchema {
 			fieldSchema, err := newFieldSchema(keyName, len(newMapping.Keys), keyType)
 			if err != nil {
@@ -179,14 +190,18 @@ func GenerateDataModel(config Config) error {
 		model = append(model, newMapping)
 	}
 
-	tmpl, err := template.New("struct").Parse(structTpl)
+	funcMap := template.FuncMap{
+		"sub": func(a, b int) int { return a - b },
+	}
+
+	tmpl, err := template.New("struct").Funcs(funcMap).Parse(structTpl)
 	if err != nil {
 		return err
 	}
 
 	for _, mapping := range model {
 		data := map[string]interface{}{
-			"Package": config.Package, // TODO
+			"Package": config.Package,
 			"Schema":  mapping,
 		}
 		var buf bytes.Buffer

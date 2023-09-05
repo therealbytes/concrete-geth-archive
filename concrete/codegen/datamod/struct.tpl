@@ -28,23 +28,26 @@ func New{{.Schema.Name}}Item(slot lib.StorageSlot) *{{.Schema.Name}}Item {
         *datamod.NewStorageStruct(slot, sizes),
     }
 }
-{{if eq (len .Schema.Values) 1}}{{range .Schema.Values}}
-func (item *{{$.Schema.Name}}Item) Get() {{.Type.GoType}} {
-    data := item.GetField({{.Index}})
-    return datamod.{{.Type.DecodeFunc}}({{.Type.Size}}, data)
+
+func (item *{{$.Schema.Name}}Item) Get() ({{range .Schema.Values}}
+    {{.Type.GoType}}, {{end}}
+) {
+    return {{range $index, $element := .Schema.Values}}datamod.{{.Type.DecodeFunc}}({{.Type.Size}}, item.GetField({{.Index}})){{if eq $index (sub (len $.Schema.Values) 1)}}{{else}}, {{end}}{{end}}
 }
 
-func (item *{{$.Schema.Name}}Item) Set(value {{.Type.GoType}}) {
-    data := datamod.{{.Type.EncodeFunc}}({{.Type.Size}}, value)
-    item.SetField({{.Index}}, data)
-}{{end}}{{end}}
+func (item *{{$.Schema.Name}}Item) Set({{range .Schema.Values}}
+    {{.Name}} {{.Type.GoType}}, {{end}}
+) {{"{"}}{{range .Schema.Values}}
+    item.SetField({{.Index}}, datamod.{{.Type.EncodeFunc}}({{.Type.Size}}, {{.Name}})){{end}}
+}
 {{range .Schema.Values}}
-func (item *{{$.Schema.Name}}Item) Get{{.Name}}() {{.Type.GoType}} {
+func (item *{{$.Schema.Name}}Item) Get{{.Title}}() {{.Type.GoType}} {
     data := item.GetField({{.Index}})
     return datamod.{{.Type.DecodeFunc}}({{.Type.Size}}, data)
 }
 
-func (item *{{$.Schema.Name}}Item) Set{{.Name}}(value {{.Type.GoType}}) {
+func (item *{{$.Schema.Name}}Item) Set{{.Title}}(value {{.Type.GoType}}) {
     data := datamod.{{.Type.EncodeFunc}}({{.Type.Size}}, value)
     item.SetField({{.Index}}, data)
-}{{end}}
+}
+{{end}}
