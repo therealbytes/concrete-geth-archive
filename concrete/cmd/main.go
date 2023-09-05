@@ -22,6 +22,7 @@ import (
 	"strings"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/concrete/codegen/datamod"
 	"github.com/ethereum/go-ethereum/concrete/codegen/solgen"
 	"github.com/spf13/cobra"
 )
@@ -54,26 +55,37 @@ func fileName(path string) string {
 func main() {
 	var rootCmd = &cobra.Command{Use: "concrete"}
 
-	var cmdCodegen = &cobra.Command{
+	var cmdSolgen = &cobra.Command{
 		Use:   "solgen",
-		Short: "generate a solidity precompile caller library from an ABI file",
-		Run:   runCodeGen,
+		Short: "Generate a solidity precompile caller library from an ABI file",
+		Run:   runSolgen,
 	}
 
-	cmdCodegen.Flags().String("abi", "", "path to the ABI file")
-	cmdCodegen.Flags().String("out", "", "path to the output file")
-	cmdCodegen.Flags().String("solidity", "", "path to the solidity file")
-	cmdCodegen.Flags().StringP("name", "n", "", "name for the generated library")
-	cmdCodegen.Flags().StringP("address", "a", "", "precompile address")
+	cmdSolgen.Flags().String("abi", "", "path to the ABI file")
+	cmdSolgen.Flags().String("out", "./", "path to the output file")
+	cmdSolgen.Flags().String("solidity", "", "path to the solidity file")
+	cmdSolgen.Flags().StringP("name", "n", "", "name for the generated library")
+	cmdSolgen.Flags().StringP("address", "a", "", "precompile address")
+	rootCmd.AddCommand(cmdSolgen)
 
-	rootCmd.AddCommand(cmdCodegen)
+	var cmdDatamod = &cobra.Command{
+		Use:   "datamod <path>",
+		Short: "Generate type safe go wrappers for datastore structures from a json definition",
+		Args:  cobra.MinimumNArgs(1),
+		Run:   runDatamod,
+	}
+
+	cmdDatamod.Flags().String("out", "./", "dir to write the generated files to")
+	cmdDatamod.Flags().String("pkg", "main", "package name for the generated files")
+	rootCmd.AddCommand(cmdDatamod)
+
 	if err := rootCmd.Execute(); err != nil {
 		fmt.Println(err)
 		os.Exit(1)
 	}
 }
 
-func runCodeGen(cmd *cobra.Command, args []string) {
+func runSolgen(cmd *cobra.Command, args []string) {
 	abiPath, err := cmd.Flags().GetString("abi")
 	checkErr(err)
 	outPath, err := cmd.Flags().GetString("out")
@@ -137,8 +149,43 @@ Output   : %s
 Solidity : %s
 `, name, address, abiPath, outPath, solPath)
 
-	err = solgen.GenerateSolidityLib(config)
+	err = solgen.GenerateSolidityLibrary(config)
 	checkErr(err)
 
 	fmt.Printf("Library generated successfully.\nLibrary written to: %s\n", outPath)
+}
+
+func runDatamod(cmd *cobra.Command, args []string) {
+	jsonPath := args[0]
+	outPath, err := cmd.Flags().GetString("out")
+	checkErr(err)
+	pkg, err := cmd.Flags().GetString("pkg")
+	checkErr(err)
+
+	jsonIsDir, err := isDir(jsonPath)
+	checkErr(err)
+	if jsonIsDir {
+		fmt.Println("JSON path must be a file")
+		os.Exit(1)
+	}
+
+	outIsDir, err := isDir(outPath)
+	checkErr(err)
+	if !outIsDir {
+		fmt.Println("Output path must be a directory")
+		os.Exit(1)
+	}
+
+	config := datamod.Config{
+		JSON:    jsonPath,
+		Out:     outPath,
+		Package: pkg,
+	}
+
+	fmt.Println("Generating data model wrappers for:", jsonPath)
+
+	err = datamod.GenerateDataModel(config)
+	checkErr(err)
+
+	fmt.Println("Data model wrappers generated successfully.")
 }

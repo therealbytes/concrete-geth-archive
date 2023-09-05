@@ -84,7 +84,7 @@ func withLocation(typeStr string, arg abi.Argument) string {
 	return typeStr + " memory" + argName
 }
 
-func generateSolidityLib(ABI abi.ABI, cABI customABI, config Config) (string, error) {
+func generateSolidityLibrary(ABI abi.ABI, cABI customABI, config Config) (string, error) {
 	config.Sol = filepath.ToSlash(config.Sol)
 
 	tmpl, err := template.New("solgen").Parse(solgenTpl)
@@ -213,12 +213,12 @@ func GetABI(path string) (abi.ABI, customABI, error) {
 	return abi.ABI{}, customABI{}, err
 }
 
-func GenerateSolidityLib(config Config) error {
+func GenerateSolidityLibrary(config Config) error {
 	ABI, cABI, err := GetABI(config.ABI)
 	if err != nil {
 		return err
 	}
-	code, err := generateSolidityLib(ABI, cABI, config)
+	code, err := generateSolidityLibrary(ABI, cABI, config)
 	if err != nil {
 		return err
 	}
