@@ -20,6 +20,7 @@ import (
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/common/math"
 )
 
 func EncodeAddress(_ int, address common.Address) []byte {
@@ -37,9 +38,8 @@ func EncodeBool(_ int, b bool) []byte {
 	return []byte{0}
 }
 
-// TODO: bool decoding consistency
 func DecodeBool(_ int, data []byte) bool {
-	return data[0] != 0
+	return data[0]&1 == byte(0x01)
 }
 
 func EncodeBytes(size int, b []byte) []byte {
@@ -50,21 +50,37 @@ func DecodeBytes(size int, data []byte) []byte {
 	return common.LeftPadBytes(data, size)
 }
 
-// TODO: this
 func EncodeInt(size int, i *big.Int) []byte {
-	return nil
+	buf := make([]byte, size)
+	if i.Sign() == -1 {
+		for j := 0; j < size; j++ {
+			buf[j] = 0xFF
+		}
+	}
+	iBytes := math.U256Bytes(i)
+	copy(buf[size-len(iBytes):], iBytes)
+	return buf
 }
 
 func DecodeInt(size int, data []byte) *big.Int {
-	return nil
+	b := new(big.Int).SetBytes(data)
+	if data[0]&0x80 != 0 {
+		for i := len(data); i < size; i++ {
+			b.Or(b, new(big.Int).Lsh(big.NewInt(0xFF), uint(8*i)))
+		}
+	}
+	return b
 }
 
 func EncodeUint(size int, i *big.Int) []byte {
-	return nil
+	buf := make([]byte, size)
+	iBytes := math.U256Bytes(i)
+	copy(buf[size-len(iBytes):], iBytes)
+	return buf
 }
 
 func DecodeUint(size int, data []byte) *big.Int {
-	return nil
+	return new(big.Int).SetBytes(data)
 }
 
 type FieldType struct {
@@ -123,7 +139,6 @@ func init() {
 			DecodeFunc: "DecodeUint",
 		}
 	}
-
 	NameToFieldType["int"] = NameToFieldType["int256"]
 	NameToFieldType["uint"] = NameToFieldType["uint256"]
 }
