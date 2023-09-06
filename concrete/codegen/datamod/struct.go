@@ -1,14 +1,16 @@
 package datamod
 
-import "github.com/ethereum/go-ethereum/concrete/lib"
+import (
+	"github.com/ethereum/go-ethereum/concrete/lib"
+)
 
-type StorageStruct struct {
+type DatamodStruct struct {
 	storage lib.SlotArray
 	offsets []int
 	sizes   []int
 }
 
-func NewStorageStruct(slot lib.StorageSlot, sizes []int) *StorageStruct {
+func NewDatamodStruct(slot lib.StorageSlot, sizes []int) *DatamodStruct {
 	offsets := make([]int, len(sizes))
 	offset := 0
 	nSlots := 0
@@ -21,14 +23,14 @@ func NewStorageStruct(slot lib.StorageSlot, sizes []int) *StorageStruct {
 		offset += size
 		offsets[i] = offset
 	}
-	return &StorageStruct{
+	return &DatamodStruct{
 		storage: slot.SlotArray([]int{nSlots}),
 		offsets: offsets,
 		sizes:   sizes,
 	}
 }
 
-func (s *StorageStruct) GetField(index int) []byte {
+func (s *DatamodStruct) GetField(index int) []byte {
 	absOffset := s.offsets[index]
 	slotIdx := absOffset / 32
 	slotOffset := absOffset % 32
@@ -38,7 +40,7 @@ func (s *StorageStruct) GetField(index int) []byte {
 	return slotValue[slotOffset : slotOffset+size]
 }
 
-func (s *StorageStruct) SetField(index int, data []byte) {
+func (s *DatamodStruct) SetField(index int, data []byte) {
 	absOffset := s.offsets[index]
 	slotIdx := absOffset / 32
 	slotOffset := absOffset % 32

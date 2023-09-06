@@ -156,18 +156,26 @@ func GenerateDataModel(config Config) error {
 	}
 
 	for _, mapping := range model {
+		mappingName := mapping.Name
 		structName := mapping.Name + "Item"
+
 		_sizes := make([]string, len(mapping.Values))
 		for i, field := range mapping.Values {
 			_sizes[i] = fmt.Sprint(field.Type.Size)
 		}
-		sizes := fmt.Sprintf("[]int{%s}", strings.Join(_sizes, ", "))
+		sizesStr := fmt.Sprintf("[]int{%s}", strings.Join(_sizes, ", "))
+
+		_keys := make([]string, len(mapping.Keys))
+		for i, field := range mapping.Keys {
+			_keys[i] = fmt.Sprint(field.Type.Size)
+		}
 
 		data := map[string]interface{}{
-			"Package":    config.Package,
-			"Schema":     mapping,
-			"StructName": structName,
-			"Sizes":      sizes,
+			"Package":     config.Package,
+			"Schema":      mapping,
+			"MappingName": mappingName,
+			"StructName":  structName,
+			"SizesStr":    sizesStr,
 		}
 
 		var buf bytes.Buffer
