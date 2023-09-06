@@ -3,19 +3,22 @@
 package {{.Package}}
 
 import (
-	"errors"
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/concrete/codegen/datamod"
+	"github.com/ethereum/go-ethereum/concrete/crypto"
 	"github.com/ethereum/go-ethereum/concrete/lib"
 )
 
 // Reference imports to suppress errors if they are not otherwise used.
 var (
-	_ = errors.New
 	_ = big.NewInt
 	_ = common.Big1
+)
+
+var (
+	{{.MappingName}}DefaultKey = crypto.Keccak256([]byte("datamod.v1.{{.MappingName}}"))
 )
 
 type {{.StructName}} struct {
@@ -63,7 +66,11 @@ type {{.MappingName}} struct {
 	mapping lib.Mapping
 }
 
-func New{{.MappingName}}(ds lib.Datastore, key []byte) *{{.MappingName}} {
+func New{{.MappingName}}(ds lib.Datastore) *{{.MappingName}} {
+	return &{{.MappingName}}{ds.Mapping({{.MappingName}}DefaultKey)}
+}
+
+func New{{.MappingName}}WithKey(ds lib.Datastore, key []byte) *{{.MappingName}} {
 	return &{{.MappingName}}{ds.Mapping(key)}
 }
 
