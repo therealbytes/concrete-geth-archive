@@ -28,8 +28,8 @@ import (
 	"unicode"
 )
 
-//go:embed struct.tpl
-var structTpl string
+//go:embed schema.tpl
+var schemaTpl string
 
 func lowerFirstLetter(str string) string {
 	if len(str) == 0 {
@@ -150,7 +150,7 @@ func GenerateDataModel(config Config) error {
 	funcMap := template.FuncMap{
 		"sub": func(a, b int) int { return a - b },
 	}
-	tmpl, err := template.New("struct").Funcs(funcMap).Parse(structTpl)
+	tmpl, err := template.New("struct").Funcs(funcMap).Parse(schemaTpl)
 	if err != nil {
 		return err
 	}
