@@ -200,10 +200,20 @@ func GenerateDataModel(config Config) error {
 	}
 
 	for _, mapping := range model {
-		data := map[string]interface{}{
-			"Package": config.Package,
-			"Schema":  mapping,
+		structName := mapping.Name + "Item"
+		_sizes := make([]string, len(mapping.Values))
+		for i, field := range mapping.Values {
+			_sizes[i] = fmt.Sprint(field.Type.Size)
 		}
+		sizes := fmt.Sprintf("[]int{%s}", strings.Join(_sizes, ", "))
+
+		data := map[string]interface{}{
+			"Package":    config.Package,
+			"Schema":     mapping,
+			"StructName": structName,
+			"Sizes":      sizes,
+		}
+
 		var buf bytes.Buffer
 		if err := tmpl.Execute(&buf, data); err != nil {
 			return err

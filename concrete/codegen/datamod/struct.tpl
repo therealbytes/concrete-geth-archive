@@ -16,37 +16,33 @@ var (
 	_ = big.NewInt
 )
 
-type {{.Schema.Name}}Item struct {
+type {{.StructName}} struct {
     datamod.StorageStruct
 }
 
-func New{{.Schema.Name}}Item(slot lib.StorageSlot) *{{.Schema.Name}}Item {
-    sizes := []int{{"{"}}{{range .Schema.Values}}
-        {{.Type.Size}},{{end}}
-    }
-    return &{{.Schema.Name}}Item{
-        *datamod.NewStorageStruct(slot, sizes),
-    }
+func New{{.StructName}}(slot lib.StorageSlot) *{{.StructName}} {
+    sizes := {{.Sizes}}
+    return &{{.StructName}}{*datamod.NewStorageStruct(slot, sizes)}
 }
 
-func (item *{{$.Schema.Name}}Item) Get() ({{range .Schema.Values}}
+func (item *{{$.StructName}}) Get() ({{range .Schema.Values}}
     {{.Type.GoType}}, {{end}}
 ) {
-    return {{range $index, $element := .Schema.Values}}datamod.{{.Type.DecodeFunc}}({{.Type.Size}}, item.GetField({{.Index}})){{if eq $index (sub (len $.Schema.Values) 1)}}{{else}}, {{end}}{{end}}
+    return {{range .Schema.Values}}datamod.{{.Type.DecodeFunc}}({{.Type.Size}}, item.GetField({{.Index}})){{if eq .Index (sub (len $.Schema.Values) 1)}}{{else}}, {{end}}{{end}}
 }
 
-func (item *{{$.Schema.Name}}Item) Set({{range .Schema.Values}}
+func (item *{{$.StructName}}) Set({{range .Schema.Values}}
     {{.Name}} {{.Type.GoType}}, {{end}}
 ) {{"{"}}{{range .Schema.Values}}
     item.SetField({{.Index}}, datamod.{{.Type.EncodeFunc}}({{.Type.Size}}, {{.Name}})){{end}}
 }
 {{range .Schema.Values}}
-func (item *{{$.Schema.Name}}Item) Get{{.Title}}() {{.Type.GoType}} {
+func (item *{{$.StructName}}) Get{{.Title}}() {{.Type.GoType}} {
     data := item.GetField({{.Index}})
     return datamod.{{.Type.DecodeFunc}}({{.Type.Size}}, data)
 }
 
-func (item *{{$.Schema.Name}}Item) Set{{.Title}}(value {{.Type.GoType}}) {
+func (item *{{$.StructName}}) Set{{.Title}}(value {{.Type.GoType}}) {
     data := datamod.{{.Type.EncodeFunc}}({{.Type.Size}}, value)
     item.SetField({{.Index}}, data)
 }
