@@ -28,7 +28,7 @@ import (
 	"unicode"
 )
 
-//go:embed schema.tpl
+//go:embed table.tpl
 var tableTpl string
 
 func lowerFirstLetter(str string) string {
