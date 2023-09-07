@@ -71,13 +71,19 @@ func nameToFieldType(name string) (FieldType, error) {
 		if size < 1 || size > 32 {
 			return FieldType{}, fmt.Errorf("invalid bytes size %d", size)
 		}
-		return FieldType{
+		fieldType := FieldType{
 			Name:       name,
 			Size:       size,
 			GoType:     "[]byte",
 			EncodeFunc: "EncodeBytes",
 			DecodeFunc: "DecodeBytes",
-		}, nil
+		}
+		if size == 32 {
+			fieldType.GoType = "common.Hash"
+			fieldType.EncodeFunc = "EncodeHash"
+			fieldType.DecodeFunc = "DecodeHash"
+		}
+		return fieldType, nil
 	}
 
 	matchesUint := strings.HasPrefix(name, "uint")
@@ -104,6 +110,10 @@ func nameToFieldType(name string) (FieldType, error) {
 			return FieldType{}, fmt.Errorf("invalid integer size %d", size)
 		}
 
+		fieldType := FieldType{
+			Name: name,
+			Size: size / 8,
+		}
 		var (
 			goType     string
 			codecSufix string
@@ -115,15 +125,10 @@ func nameToFieldType(name string) (FieldType, error) {
 			goType = "*big.Int"
 			codecSufix = fmt.Sprintf("%s256", upperFirstLetter(noSizeTypeStr))
 		}
-		encodeFunc := "Encode" + codecSufix
-		decodeFunc := "Decode" + codecSufix
-		return FieldType{
-			Name:       name,
-			Size:       size / 8,
-			GoType:     goType,
-			EncodeFunc: encodeFunc,
-			DecodeFunc: decodeFunc,
-		}, nil
+		fieldType.GoType = goType
+		fieldType.EncodeFunc = "Encode" + codecSufix
+		fieldType.DecodeFunc = "Decode" + codecSufix
+		return fieldType, nil
 	}
 	return FieldType{}, fmt.Errorf("unknown field type %s", name)
 }

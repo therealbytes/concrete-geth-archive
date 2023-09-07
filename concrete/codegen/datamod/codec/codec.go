@@ -43,6 +43,14 @@ func DecodeBool(_ int, data []byte) bool {
 	return data[0]&1 == byte(0x01)
 }
 
+func EncodeHash(_ int, hash common.Hash) []byte {
+	return hash.Bytes()
+}
+
+func DecodeHash(_ int, data []byte) common.Hash {
+	return common.BytesToHash(data)
+}
+
 func EncodeBytes(size int, b []byte) []byte {
 	return common.RightPadBytes(b, size)
 }
