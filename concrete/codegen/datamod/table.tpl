@@ -6,7 +6,7 @@ import (
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/concrete/codegen/datamod"
+	"github.com/ethereum/go-ethereum/concrete/codegen/datamod/codec"
 	"github.com/ethereum/go-ethereum/concrete/crypto"
 	"github.com/ethereum/go-ethereum/concrete/lib"
 )
@@ -15,7 +15,7 @@ import (
 var (
 	_ = big.NewInt
 	_ = common.Big1
-	_ = datamod.EncodeAddress
+	_ = codec.EncodeAddress
 )
 
 var (
@@ -37,7 +37,7 @@ func (v *{{$.RowStructName}}) Get() (
 {{- end }}
 ) {
 	return {{ range .Schema.Values -}}
-		datamod.{{.Type.DecodeFunc}}(
+		codec.{{.Type.DecodeFunc}}(
 			{{- .Type.Size }}, v.GetField({{.Index}}))
 			{{- if eq .Index (sub (len $.Schema.Values) 1) }}{{else}}, {{end}}
 	{{- end }}
@@ -49,17 +49,17 @@ func (v *{{$.RowStructName}}) Set(
 {{- end }}
 ) {
 {{- range .Schema.Values }}
-	v.SetField({{.Index}}, datamod.{{.Type.EncodeFunc}}({{.Type.Size}}, {{.Name}}))
+	v.SetField({{.Index}}, codec.{{.Type.EncodeFunc}}({{.Type.Size}}, {{.Name}}))
 {{- end }}
 }
 {{range .Schema.Values}}
 func (v *{{$.RowStructName}}) Get{{.Title}}() {{.Type.GoType}} {
 	data := v.GetField({{.Index}})
-	return datamod.{{.Type.DecodeFunc}}({{.Type.Size}}, data)
+	return codec.{{.Type.DecodeFunc}}({{.Type.Size}}, data)
 }
 
 func (v *{{$.RowStructName}}) Set{{.Title}}(value {{.Type.GoType}}) {
-	data := datamod.{{.Type.EncodeFunc}}({{.Type.Size}}, value)
+	data := codec.{{.Type.EncodeFunc}}({{.Type.Size}}, value)
 	v.SetField({{.Index}}, data)
 }
 {{end}}
@@ -85,9 +85,9 @@ func (m *{{.TableStructName}}) Get(
 		m.mapping.
 		{{- range .Schema.Keys -}}
 		{{- if eq .Index (sub (len $.Schema.Keys) 1) -}}
-			Value(datamod.{{.Type.EncodeFunc}}({{.Type.Size}}, {{.Name}})),
+			Value(codec.{{.Type.EncodeFunc}}({{.Type.Size}}, {{.Name}})),
 		{{- else -}}
-			Mapping(datamod.{{.Type.EncodeFunc}}({{.Type.Size}}, {{.Name}})).
+			Mapping(codec.{{.Type.EncodeFunc}}({{.Type.Size}}, {{.Name}})).
 		{{- end -}}
 		{{end}}
 	)

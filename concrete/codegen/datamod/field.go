@@ -17,71 +17,7 @@ package datamod
 
 import (
 	"fmt"
-	"math/big"
-
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/common/math"
 )
-
-func EncodeAddress(_ int, address common.Address) []byte {
-	return address.Bytes()
-}
-
-func DecodeAddress(_ int, data []byte) common.Address {
-	return common.BytesToAddress(data)
-}
-
-func EncodeBool(_ int, b bool) []byte {
-	if b {
-		return []byte{1}
-	}
-	return []byte{0}
-}
-
-func DecodeBool(_ int, data []byte) bool {
-	return data[0]&1 == byte(0x01)
-}
-
-func EncodeBytes(size int, b []byte) []byte {
-	return common.LeftPadBytes(b, size)
-}
-
-func DecodeBytes(size int, data []byte) []byte {
-	return common.LeftPadBytes(data, size)
-}
-
-func EncodeInt(size int, i *big.Int) []byte {
-	buf := make([]byte, size)
-	if i.Sign() == -1 {
-		for j := 0; j < size; j++ {
-			buf[j] = 0xFF
-		}
-	}
-	iBytes := math.U256Bytes(i)
-	copy(buf, iBytes[len(iBytes)-size:])
-	return buf
-}
-
-func DecodeInt(size int, data []byte) *big.Int {
-	b := new(big.Int).SetBytes(data)
-	if data[0]&0x80 != 0 {
-		for i := len(data); i < size; i++ {
-			b.Or(b, new(big.Int).Lsh(big.NewInt(0xFF), uint(8*i)))
-		}
-	}
-	return b
-}
-
-func EncodeUint(size int, i *big.Int) []byte {
-	buf := make([]byte, size)
-	iBytes := math.U256Bytes(i)
-	copy(buf, iBytes[len(iBytes)-size:])
-	return buf
-}
-
-func DecodeUint(size int, data []byte) *big.Int {
-	return new(big.Int).SetBytes(data)
-}
 
 type FieldType struct {
 	Name       string
