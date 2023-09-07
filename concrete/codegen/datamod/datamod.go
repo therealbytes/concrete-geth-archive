@@ -81,9 +81,9 @@ func newFieldSchema(name string, index int, typeStr string) (FieldSchema, error)
 	if !isValidName(name) {
 		return FieldSchema{}, fmt.Errorf("invalid field name: %s", name)
 	}
-	fieldType, ok := NameToFieldType[typeStr]
-	if !ok {
-		return FieldSchema{}, fmt.Errorf("invalid type: %s", typeStr)
+	fieldType, err := nameToFieldType(typeStr)
+	if err != nil {
+		return FieldSchema{}, err
 	}
 	return FieldSchema{
 		Name:  lowerFirstLetter(name),

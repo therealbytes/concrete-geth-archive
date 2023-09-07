@@ -16,8 +16,10 @@
 package codec
 
 import (
+	"encoding/binary"
 	"math/big"
 
+	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/math"
 )
@@ -42,42 +44,107 @@ func DecodeBool(_ int, data []byte) bool {
 }
 
 func EncodeBytes(size int, b []byte) []byte {
-	return common.LeftPadBytes(b, size)
+	return common.RightPadBytes(b, size)
 }
 
-func DecodeBytes(size int, data []byte) []byte {
-	return common.LeftPadBytes(data, size)
+func DecodeBytes(_ int, data []byte) []byte {
+	return data
 }
 
-func EncodeInt(size int, i *big.Int) []byte {
-	buf := make([]byte, size)
-	if i.Sign() == -1 {
-		for j := 0; j < size; j++ {
-			buf[j] = 0xFF
-		}
-	}
-	iBytes := math.U256Bytes(i)
-	copy(buf, iBytes[len(iBytes)-size:])
-	return buf
+func EncodeUint256(_ int, i *big.Int) []byte {
+	return math.U256Bytes(i)
 }
 
-func DecodeInt(size int, data []byte) *big.Int {
-	b := new(big.Int).SetBytes(data)
-	if data[0]&0x80 != 0 {
-		for i := len(data); i < size; i++ {
-			b.Or(b, new(big.Int).Lsh(big.NewInt(0xFF), uint(8*i)))
-		}
-	}
-	return b
-}
-
-func EncodeUint(size int, i *big.Int) []byte {
-	buf := make([]byte, size)
-	iBytes := math.U256Bytes(i)
-	copy(buf, iBytes[len(iBytes)-size:])
-	return buf
-}
-
-func DecodeUint(size int, data []byte) *big.Int {
+func DecodeUint256(_ int, data []byte) *big.Int {
 	return new(big.Int).SetBytes(data)
+}
+
+func EncodeInt256(_ int, i *big.Int) []byte {
+	return math.U256Bytes(i)
+}
+
+func DecodeInt256(_ int, data []byte) *big.Int {
+	ret := new(big.Int).SetBytes(data)
+	if ret.Bit(255) == 1 {
+		ret.Add(abi.MaxUint256, new(big.Int).Neg(ret))
+		ret.Add(ret, common.Big1)
+		ret.Neg(ret)
+	}
+	return ret
+}
+
+func EncodeSmallUint8(_ int, value uint8) []byte {
+	return []byte{value}
+}
+
+func EncodeSmallUint16(_ int, value uint16) []byte {
+	buf := make([]byte, 2)
+	binary.BigEndian.PutUint16(buf, value)
+	return buf
+}
+
+func EncodeSmallUint32(_ int, value uint32) []byte {
+	buf := make([]byte, 4)
+	binary.BigEndian.PutUint32(buf, value)
+	return buf
+}
+
+func EncodeSmallUint64(_ int, value uint64) []byte {
+	buf := make([]byte, 8)
+	binary.BigEndian.PutUint64(buf, value)
+	return buf
+}
+
+func DecodeSmallUint8(_ int, data []byte) uint8 {
+	return data[0]
+}
+
+func DecodeSmallUint16(_ int, data []byte) uint16 {
+	return binary.BigEndian.Uint16(data)
+}
+
+func DecodeSmallUint32(_ int, data []byte) uint32 {
+	return binary.BigEndian.Uint32(data)
+}
+
+func DecodeSmallUint64(_ int, data []byte) uint64 {
+	return binary.BigEndian.Uint64(data)
+}
+
+func EncodeSmallInt8(_ int, value int8) []byte {
+	return []byte{byte(value)}
+}
+
+func EncodeSmallInt16(_ int, value int16) []byte {
+	buf := make([]byte, 2)
+	binary.BigEndian.PutUint16(buf, uint16(value))
+	return buf
+}
+
+func EncodeSmallInt32(_ int, value int32) []byte {
+	buf := make([]byte, 4)
+	binary.BigEndian.PutUint32(buf, uint32(value))
+	return buf
+}
+
+func EncodeSmallInt64(_ int, value int64) []byte {
+	buf := make([]byte, 8)
+	binary.BigEndian.PutUint64(buf, uint64(value))
+	return buf
+}
+
+func DecodeSmallInt8(_ int, data []byte) int8 {
+	return int8(data[0])
+}
+
+func DecodeSmallInt16(_ int, data []byte) int16 {
+	return int16(binary.BigEndian.Uint16(data))
+}
+
+func DecodeSmallInt32(_ int, data []byte) int32 {
+	return int32(binary.BigEndian.Uint32(data))
+}
+
+func DecodeSmallInt64(_ int, data []byte) int64 {
+	return int64(binary.BigEndian.Uint64(data))
 }

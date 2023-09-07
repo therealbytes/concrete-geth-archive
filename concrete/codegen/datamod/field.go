@@ -17,6 +17,8 @@ package datamod
 
 import (
 	"fmt"
+	"strconv"
+	"strings"
 )
 
 type FieldType struct {
@@ -27,54 +29,101 @@ type FieldType struct {
 	DecodeFunc string
 }
 
-var NameToFieldType map[string]FieldType
+func nameToFieldType(name string) (FieldType, error) {
+	switch name {
+	case "address":
+		return FieldType{
+			Name:       "address",
+			Size:       20,
+			GoType:     "common.Address",
+			EncodeFunc: "EncodeAddress",
+			DecodeFunc: "DecodeAddress",
+		}, nil
+	case "bool":
+		return FieldType{
+			Name:       "bool",
+			Size:       1,
+			GoType:     "bool",
+			EncodeFunc: "EncodeBool",
+			DecodeFunc: "DecodeBool",
+		}, nil
+	case "uint":
+		break
+	case "int":
+		break
+	case "bytes":
+		return FieldType{}, fmt.Errorf("bytes field type not supported")
+	case "string":
+		return FieldType{}, fmt.Errorf("string field type not supported")
+	default:
+	}
 
-func init() {
-	NameToFieldType = make(map[string]FieldType)
-	NameToFieldType["address"] = FieldType{
-		Name:       "address",
-		Size:       20,
-		GoType:     "common.Address",
-		EncodeFunc: "EncodeAddress",
-		DecodeFunc: "DecodeAddress",
-	}
-	NameToFieldType["bool"] = FieldType{
-		Name:       "bool",
-		Size:       1,
-		GoType:     "bool",
-		EncodeFunc: "EncodeBool",
-		DecodeFunc: "DecodeBool",
-	}
-	for ii := 1; ii <= 32; ii++ {
-		name := "bytes" + fmt.Sprint(ii)
-		NameToFieldType[name] = FieldType{
+	var sizeStr string
+	var size int
+	var err error
+
+	if strings.HasPrefix(name, "bytes") {
+		sizeStr = strings.TrimPrefix(name, "bytes")
+		size, err = strconv.Atoi(sizeStr)
+		if err != nil {
+			return FieldType{}, err
+		}
+		if size < 1 || size > 32 {
+			return FieldType{}, fmt.Errorf("invalid bytes size %d", size)
+		}
+		return FieldType{
 			Name:       name,
-			Size:       ii,
+			Size:       size,
 			GoType:     "[]byte",
 			EncodeFunc: "EncodeBytes",
 			DecodeFunc: "DecodeBytes",
-		}
+		}, nil
 	}
-	for ii := 1; ii <= 32; ii++ {
-		name := "int" + fmt.Sprint(ii*8)
-		NameToFieldType[name] = FieldType{
+
+	matchesUint := strings.HasPrefix(name, "uint")
+	matchesInt := strings.HasPrefix(name, "int")
+
+	if matchesUint || matchesInt {
+		var noSizeTypeStr string
+		if matchesUint {
+			noSizeTypeStr = "uint"
+		} else {
+			noSizeTypeStr = "int"
+		}
+
+		sizeStr = strings.TrimPrefix(name, noSizeTypeStr)
+		if sizeStr == "" {
+			size = 256
+		} else {
+			size, err = strconv.Atoi(sizeStr)
+			if err != nil {
+				return FieldType{}, err
+			}
+		}
+		if size < 8 || (size > 64 && size != 256) || size%8 != 0 {
+			return FieldType{}, fmt.Errorf("invalid integer size %d", size)
+		}
+
+		var (
+			goType     string
+			codecSufix string
+		)
+		if size <= 64 {
+			goType = noSizeTypeStr + fmt.Sprint(size)
+			codecSufix = fmt.Sprintf("Small%s%d", upperFirstLetter(noSizeTypeStr), size)
+		} else {
+			goType = "*big.Int"
+			codecSufix = fmt.Sprintf("%s256", upperFirstLetter(noSizeTypeStr))
+		}
+		encodeFunc := "Encode" + codecSufix
+		decodeFunc := "Decode" + codecSufix
+		return FieldType{
 			Name:       name,
-			Size:       ii,
-			GoType:     "*big.Int",
-			EncodeFunc: "EncodeInt",
-			DecodeFunc: "DecodeInt",
-		}
+			Size:       size / 8,
+			GoType:     goType,
+			EncodeFunc: encodeFunc,
+			DecodeFunc: decodeFunc,
+		}, nil
 	}
-	for ii := 1; ii <= 32; ii++ {
-		name := "uint" + fmt.Sprint(ii*8)
-		NameToFieldType[name] = FieldType{
-			Name:       name,
-			Size:       ii,
-			GoType:     "*big.Int",
-			EncodeFunc: "EncodeUint",
-			DecodeFunc: "DecodeUint",
-		}
-	}
-	NameToFieldType["int"] = NameToFieldType["int256"]
-	NameToFieldType["uint"] = NameToFieldType["uint256"]
+	return FieldType{}, fmt.Errorf("unknown field type %s", name)
 }
