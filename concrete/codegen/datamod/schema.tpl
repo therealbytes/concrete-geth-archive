@@ -19,69 +19,69 @@ var (
 )
 
 var (
-	{{.MappingName}}DefaultKey = crypto.Keccak256([]byte("datamod.v1.{{.MappingName}}"))
+	{{.TableStructName}}DefaultKey = crypto.Keccak256([]byte("datamod.v1.{{.TableStructName}}"))
 )
 
-type {{.StructName}} struct {
+type {{.RowStructName}} struct {
 	lib.StorageStruct
 }
 
-func New{{.StructName}}(slot lib.StorageSlot) *{{.StructName}} {
+func New{{.RowStructName}}(slot lib.StorageSlot) *{{.RowStructName}} {
 	sizes := {{.SizesStr}}
-	return &{{.StructName}}{*lib.NewStorageStruct(slot, sizes)}
+	return &{{.RowStructName}}{*lib.NewStorageStruct(slot, sizes)}
 }
 
-func (item *{{$.StructName}}) Get() (
+func (v *{{$.RowStructName}}) Get() (
 {{- range .Schema.Values }}
 	{{.Type.GoType}},
 {{- end }}
 ) {
 	return {{ range .Schema.Values -}}
 		datamod.{{.Type.DecodeFunc}}(
-			{{- .Type.Size }}, item.GetField({{.Index}}))
+			{{- .Type.Size }}, v.GetField({{.Index}}))
 			{{- if eq .Index (sub (len $.Schema.Values) 1) }}{{else}}, {{end}}
 	{{- end }}
 }
 
-func (item *{{$.StructName}}) Set(
+func (v *{{$.RowStructName}}) Set(
 {{- range .Schema.Values }}
 	{{.Name}} {{.Type.GoType}},
 {{- end }}
 ) {
 {{- range .Schema.Values }}
-	item.SetField({{.Index}}, datamod.{{.Type.EncodeFunc}}({{.Type.Size}}, {{.Name}}))
+	v.SetField({{.Index}}, datamod.{{.Type.EncodeFunc}}({{.Type.Size}}, {{.Name}}))
 {{- end }}
 }
 {{range .Schema.Values}}
-func (item *{{$.StructName}}) Get{{.Title}}() {{.Type.GoType}} {
-	data := item.GetField({{.Index}})
+func (v *{{$.RowStructName}}) Get{{.Title}}() {{.Type.GoType}} {
+	data := v.GetField({{.Index}})
 	return datamod.{{.Type.DecodeFunc}}({{.Type.Size}}, data)
 }
 
-func (item *{{$.StructName}}) Set{{.Title}}(value {{.Type.GoType}}) {
+func (v *{{$.RowStructName}}) Set{{.Title}}(value {{.Type.GoType}}) {
 	data := datamod.{{.Type.EncodeFunc}}({{.Type.Size}}, value)
-	item.SetField({{.Index}}, data)
+	v.SetField({{.Index}}, data)
 }
 {{end}}
 {{- if .Schema.Keys }}
-type {{.MappingName}} struct {
+type {{.TableStructName}} struct {
 	mapping lib.Mapping
 }
 
-func New{{.MappingName}}(ds lib.Datastore) *{{.MappingName}} {
-	return &{{.MappingName}}{ds.Mapping({{.MappingName}}DefaultKey)}
+func New{{.TableStructName}}(ds lib.Datastore) *{{.TableStructName}} {
+	return &{{.TableStructName}}{ds.Mapping({{.TableStructName}}DefaultKey)}
 }
 
-func New{{.MappingName}}WithKey(ds lib.Datastore, key []byte) *{{.MappingName}} {
-	return &{{.MappingName}}{ds.Mapping(key)}
+func New{{.TableStructName}}WithKey(ds lib.Datastore, key []byte) *{{.TableStructName}} {
+	return &{{.TableStructName}}{ds.Mapping(key)}
 }
 
-func (m *{{.MappingName}}) Get(
+func (m *{{.TableStructName}}) Get(
 {{- range .Schema.Keys }}
 	{{.Name}} {{.Type.GoType}},
 {{- end }}
-) *{{.StructName}} {
-	return New{{.StructName}}(
+) *{{.RowStructName}} {
+	return New{{.RowStructName}}(
 		m.mapping.
 		{{- range .Schema.Keys -}}
 		{{- if eq .Index (sub (len $.Schema.Keys) 1) -}}
@@ -93,13 +93,13 @@ func (m *{{.MappingName}}) Get(
 	)
 }
 {{- else }}
-type {{.MappingName}} = {{.StructName}}
+type {{.TableStructName}} = {{.RowStructName}}
 
-func New{{.MappingName}}(ds lib.Datastore) *{{.MappingName}} {
-	return New{{.StructName}}(ds.Value({{.MappingName}}DefaultKey))
+func New{{.TableStructName}}(ds lib.Datastore) *{{.TableStructName}} {
+	return New{{.RowStructName}}(ds.Value({{.TableStructName}}DefaultKey))
 }
 
-func New{{.MappingName}}WithKey(ds lib.Datastore, key []byte) *{{.MappingName}} {
-	return New{{.StructName}}(ds.Value(key))
+func New{{.TableStructName}}WithKey(ds lib.Datastore, key []byte) *{{.TableStructName}} {
+	return New{{.RowStructName}}(ds.Value(key))
 }
 {{- end }}
