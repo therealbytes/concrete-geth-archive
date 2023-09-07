@@ -81,7 +81,7 @@ type ModelUnmarshal map[string]MappingUnmarshal
 
 func newFieldSchema(name string, index int, typeStr string) (FieldSchema, error) {
 	if !isValidName(name) {
-		return FieldSchema{}, fmt.Errorf("invalid name: %s", name)
+		return FieldSchema{}, fmt.Errorf("invalid field name: %s", name)
 	}
 	fieldType, ok := NameToFieldType[typeStr]
 	if !ok {
@@ -105,7 +105,10 @@ func unmarshalModel(jsonContent []byte) (ModelSchema, error) {
 	var model ModelSchema
 	for name, mapping := range unmarshaledModel {
 		if !isValidName(name) {
-			return ModelSchema{}, fmt.Errorf("invalid name: %s", name)
+			return ModelSchema{}, fmt.Errorf("invalid mapping name: %s", name)
+		}
+		if len(mapping.Schema) == 0 {
+			return ModelSchema{}, fmt.Errorf("no values in mapping: %s", name)
 		}
 		newMapping := MappingSchema{Name: upperFirstLetter(name)}
 		for keyName, keyType := range mapping.KeySchema {

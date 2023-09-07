@@ -58,7 +58,7 @@ func EncodeInt(size int, i *big.Int) []byte {
 		}
 	}
 	iBytes := math.U256Bytes(i)
-	copy(buf[size-len(iBytes):], iBytes)
+	copy(buf, iBytes[len(iBytes)-size:])
 	return buf
 }
 
@@ -75,7 +75,7 @@ func DecodeInt(size int, data []byte) *big.Int {
 func EncodeUint(size int, i *big.Int) []byte {
 	buf := make([]byte, size)
 	iBytes := math.U256Bytes(i)
-	copy(buf[size-len(iBytes):], iBytes)
+	copy(buf, iBytes[len(iBytes)-size:])
 	return buf
 }
 

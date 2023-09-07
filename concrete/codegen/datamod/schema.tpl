@@ -15,6 +15,7 @@ import (
 var (
 	_ = big.NewInt
 	_ = common.Big1
+	_ = datamod.EncodeAddress
 )
 
 var (
@@ -22,12 +23,12 @@ var (
 )
 
 type {{.StructName}} struct {
-	datamod.DatamodStruct
+	lib.StorageStruct
 }
 
 func New{{.StructName}}(slot lib.StorageSlot) *{{.StructName}} {
 	sizes := {{.SizesStr}}
-	return &{{.StructName}}{*datamod.NewDatamodStruct(slot, sizes)}
+	return &{{.StructName}}{*lib.NewStorageStruct(slot, sizes)}
 }
 
 func (item *{{$.StructName}}) Get() (
@@ -62,6 +63,7 @@ func (item *{{$.StructName}}) Set{{.Title}}(value {{.Type.GoType}}) {
 	item.SetField({{.Index}}, data)
 }
 {{end}}
+{{- if .Schema.Keys }}
 type {{.MappingName}} struct {
 	mapping lib.Mapping
 }
@@ -85,8 +87,19 @@ func (m *{{.MappingName}}) Get(
 		{{- if eq .Index (sub (len $.Schema.Keys) 1) -}}
 			Value(datamod.{{.Type.EncodeFunc}}({{.Type.Size}}, {{.Name}})),
 		{{- else -}}
-			Mappingdatamod.({{.Type.EncodeFunc}}({{.Type.Size}}, {{.Name}})).
+			Mapping(datamod.{{.Type.EncodeFunc}}({{.Type.Size}}, {{.Name}})).
 		{{- end -}}
 		{{end}}
 	)
 }
+{{- else }}
+type {{.MappingName}} = {{.StructName}}
+
+func New{{.MappingName}}(ds lib.Datastore) *{{.MappingName}} {
+	return New{{.StructName}}(ds.Value({{.MappingName}}DefaultKey))
+}
+
+func New{{.MappingName}}WithKey(ds lib.Datastore, key []byte) *{{.MappingName}} {
+	return New{{.StructName}}(ds.Value(key))
+}
+{{- end }}
