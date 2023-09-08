@@ -70,7 +70,6 @@ func (s *StorageStruct) GetField(index int) []byte {
 
 	absOffset := s.offsets[index]
 	slotIndex, slotOffset := absOffset/32, absOffset%32
-
 	slotData := s.arr.Value(slotIndex).Bytes32()
 	return slotData[slotOffset : slotOffset+fieldSize]
 }
@@ -89,11 +88,32 @@ func (s *StorageStruct) SetField(index int, data []byte) {
 
 	absOffset := s.offsets[index]
 	slotIndex, slotOffset := absOffset/32, absOffset%32
-
 	slotRef := s.arr.Value(slotIndex)
 	slotData := slotRef.Bytes32()
+
 	copy(slotData[slotOffset:slotOffset+fieldSize], data)
 	copy(s.cache[index], data)
-
 	slotRef.SetBytes32(slotData)
+}
+
+func (s *StorageStruct) GetField_bytes(index int) []byte {
+	absOffset := s.offsets[index]
+	slotIndex := absOffset / 32
+	slotData := s.arr.Value(slotIndex).Bytes()
+	return slotData
+}
+
+func (s *StorageStruct) SetField_bytes(index int, data []byte) {
+	if bytes.Equal(s.cache[index], data) {
+		return
+	}
+
+	absOffset := s.offsets[index]
+	slotIndex := absOffset / 32
+	slotRef := s.arr.Value(slotIndex)
+
+	dataCopy := make([]byte, len(data))
+	copy(dataCopy, data)
+	s.cache[index] = dataCopy
+	slotRef.SetBytes(data)
 }

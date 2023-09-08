@@ -38,7 +38,7 @@ func (v *{{$.RowStructName}}) Get() (
 ) {
 	return {{ range .Schema.Values -}}
 		codec.{{.Type.DecodeFunc}}(
-			{{- .Type.Size }}, v.GetField({{.Index}}))
+			{{- .Type.Size }}, v.GetField{{.Type.FieldMod}}({{.Index}}))
 			{{- if eq .Index (sub (len $.Schema.Values) 1) }}{{else}}, {{end}}
 	{{- end }}
 }
@@ -49,18 +49,18 @@ func (v *{{$.RowStructName}}) Set(
 {{- end }}
 ) {
 {{- range .Schema.Values }}
-	v.SetField({{.Index}}, codec.{{.Type.EncodeFunc}}({{.Type.Size}}, {{.Name}}))
+	v.SetField{{.Type.FieldMod}}({{.Index}}, codec.{{.Type.EncodeFunc}}({{.Type.Size}}, {{.Name}}))
 {{- end }}
 }
 {{range .Schema.Values}}
 func (v *{{$.RowStructName}}) Get{{.Title}}() {{.Type.GoType}} {
-	data := v.GetField({{.Index}})
+	data := v.GetField{{.Type.FieldMod}}({{.Index}})
 	return codec.{{.Type.DecodeFunc}}({{.Type.Size}}, data)
 }
 
 func (v *{{$.RowStructName}}) Set{{.Title}}(value {{.Type.GoType}}) {
 	data := codec.{{.Type.EncodeFunc}}({{.Type.Size}}, value)
-	v.SetField({{.Index}}, data)
+	v.SetField{{.Type.FieldMod}}({{.Index}}, data)
 }
 {{end}}
 {{- if .Schema.Keys }}

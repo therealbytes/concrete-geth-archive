@@ -25,6 +25,7 @@ type FieldType struct {
 	Name       string
 	Size       int
 	GoType     string
+	FieldMod   string
 	EncodeFunc string
 	DecodeFunc string
 }
@@ -52,9 +53,22 @@ func nameToFieldType(name string) (FieldType, error) {
 	case "int":
 		break
 	case "bytes":
-		return FieldType{}, fmt.Errorf("bytes field type not supported")
+		return FieldType{
+			Name:       "bytes",
+			Size:       32,
+			GoType:     "[]byte",
+			FieldMod:   "_bytes",
+			EncodeFunc: "EncodeFixedBytes",
+			DecodeFunc: "DecodeFixedBytes",
+		}, nil
 	case "string":
-		return FieldType{}, fmt.Errorf("string field type not supported")
+		return FieldType{
+			Name:       "string",
+			GoType:     "string",
+			FieldMod:   "_bytes",
+			EncodeFunc: "EncodeString",
+			DecodeFunc: "DecodeString",
+		}, nil
 	default:
 	}
 
@@ -75,8 +89,8 @@ func nameToFieldType(name string) (FieldType, error) {
 			Name:       name,
 			Size:       size,
 			GoType:     "[]byte",
-			EncodeFunc: "EncodeBytes",
-			DecodeFunc: "DecodeBytes",
+			EncodeFunc: "EncodeFixedBytes",
+			DecodeFunc: "DecodeFixedBytes",
 		}
 		if size == 32 {
 			fieldType.GoType = "common.Hash"
