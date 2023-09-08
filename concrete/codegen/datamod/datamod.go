@@ -186,7 +186,7 @@ func GenerateDataModel(config Config) error {
 		if err := tpl.Execute(&buf, data); err != nil {
 			return err
 		}
-		outPath := filepath.Join(config.Out, tableName+".go")
+		outPath := filepath.Join(config.Out, lowerFirstLetter(tableName)+".go")
 		err := os.WriteFile(outPath, buf.Bytes(), 0644)
 		if err != nil {
 			return err
