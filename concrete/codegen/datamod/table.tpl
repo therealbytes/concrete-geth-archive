@@ -23,12 +23,12 @@ var (
 )
 
 type {{.RowStructName}} struct {
-	lib.StorageStruct
+	lib.DatastoreStruct
 }
 
-func New{{.RowStructName}}(store lib.StoreValue) *{{.RowStructName}} {
+func New{{.RowStructName}}(store lib.DatastoreSlot) *{{.RowStructName}} {
 	sizes := {{.SizesStr}}
-	return &{{.RowStructName}}{*lib.NewStorageStruct(store, sizes)}
+	return &{{.RowStructName}}{*lib.NewDatastoreStruct(store, sizes)}
 }
 
 func (v *{{$.RowStructName}}) Get() (
@@ -65,7 +65,7 @@ func (v *{{$.RowStructName}}) Set{{.Title}}(value {{.Type.GoType}}) {
 {{end}}
 {{- if .Schema.Keys }}
 type {{.TableStructName}} struct {
-	store lib.StoreValue
+	store lib.DatastoreSlot
 }
 
 func New{{.TableStructName}}(ds lib.Datastore) *{{.TableStructName}} {

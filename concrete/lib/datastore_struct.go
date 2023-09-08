@@ -19,16 +19,15 @@ import (
 	"bytes"
 )
 
-type StorageStruct struct {
-	store   StoreValue
-	arr     ValueArray
-	ref     Mapping
+type DatastoreStruct struct {
+	store   DatastoreSlot
+	arr     SlotArray
 	offsets []int
 	sizes   []int
 	cache   [][]byte
 }
 
-func NewStorageStruct(store StoreValue, sizes []int) *StorageStruct {
+func NewDatastoreStruct(store DatastoreSlot, sizes []int) *DatastoreStruct {
 	var (
 		offset  = 0
 		offsets = make([]int, len(sizes))
@@ -44,17 +43,16 @@ func NewStorageStruct(store StoreValue, sizes []int) *StorageStruct {
 	}
 	nSlots := (offset + size + 31) / 32
 
-	return &StorageStruct{
+	return &DatastoreStruct{
 		store:   store,
-		arr:     store.ValueArray([]int{nSlots}),
-		ref:     store.Mapping(),
+		arr:     store.SlotArray([]int{nSlots}),
 		offsets: offsets,
 		sizes:   sizes,
 		cache:   make([][]byte, len(sizes)),
 	}
 }
 
-func (s *StorageStruct) GetField(index int) []byte {
+func (s *DatastoreStruct) GetField(index int) []byte {
 	fieldSize := s.sizes[index]
 	if fieldSize == 0 {
 		return nil
@@ -74,7 +72,7 @@ func (s *StorageStruct) GetField(index int) []byte {
 	return slotData[slotOffset : slotOffset+fieldSize]
 }
 
-func (s *StorageStruct) SetField(index int, data []byte) {
+func (s *DatastoreStruct) SetField(index int, data []byte) {
 	fieldSize := s.sizes[index]
 	if fieldSize == 0 {
 		return
@@ -96,14 +94,14 @@ func (s *StorageStruct) SetField(index int, data []byte) {
 	slotRef.SetBytes32(slotData)
 }
 
-func (s *StorageStruct) GetField_bytes(index int) []byte {
+func (s *DatastoreStruct) GetField_bytes(index int) []byte {
 	absOffset := s.offsets[index]
 	slotIndex := absOffset / 32
 	slotData := s.arr.Value(slotIndex).Bytes()
 	return slotData
 }
 
-func (s *StorageStruct) SetField_bytes(index int, data []byte) {
+func (s *DatastoreStruct) SetField_bytes(index int, data []byte) {
 	if bytes.Equal(s.cache[index], data) {
 		return
 	}

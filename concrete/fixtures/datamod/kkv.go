@@ -23,12 +23,12 @@ var (
 )
 
 type KkvRow struct {
-	lib.StorageStruct
+	lib.DatastoreStruct
 }
 
-func NewKkvRow(store lib.StoreValue) *KkvRow {
+func NewKkvRow(store lib.DatastoreSlot) *KkvRow {
 	sizes := []int{32}
-	return &KkvRow{*lib.NewStorageStruct(store, sizes)}
+	return &KkvRow{*lib.NewDatastoreStruct(store, sizes)}
 }
 
 func (v *KkvRow) Get() (
@@ -54,7 +54,7 @@ func (v *KkvRow) SetValue(value common.Hash) {
 }
 
 type Kkv struct {
-	store lib.StoreValue
+	store lib.DatastoreSlot
 }
 
 func NewKkv(ds lib.Datastore) *Kkv {
@@ -66,12 +66,12 @@ func NewKkvWithKey(ds lib.Datastore, key []byte) *Kkv {
 }
 
 func (m *Kkv) Get(
-	key1 common.Hash,
 	key2 common.Hash,
+	key1 common.Hash,
 ) *KkvRow {
 	store := m.store.Mapping().NestedValue(
-		codec.EncodeHash(32, key1),
 		codec.EncodeHash(32, key2),
+		codec.EncodeHash(32, key1),
 	)
 	return NewKkvRow(store)
 }
