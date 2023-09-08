@@ -26,9 +26,9 @@ type {{.RowStructName}} struct {
 	lib.StorageStruct
 }
 
-func New{{.RowStructName}}(slot lib.StorageSlot) *{{.RowStructName}} {
+func New{{.RowStructName}}(store lib.StoreValue) *{{.RowStructName}} {
 	sizes := {{.SizesStr}}
-	return &{{.RowStructName}}{*lib.NewStorageStruct(slot, sizes)}
+	return &{{.RowStructName}}{*lib.NewStorageStruct(store, sizes)}
 }
 
 func (v *{{$.RowStructName}}) Get() (
@@ -65,15 +65,15 @@ func (v *{{$.RowStructName}}) Set{{.Title}}(value {{.Type.GoType}}) {
 {{end}}
 {{- if .Schema.Keys }}
 type {{.TableStructName}} struct {
-	mapping lib.Mapping
+	store lib.StoreValue
 }
 
 func New{{.TableStructName}}(ds lib.Datastore) *{{.TableStructName}} {
-	return &{{.TableStructName}}{ds.Mapping({{.TableStructName}}DefaultKey)}
+	return &{{.TableStructName}}{ds.Value({{.TableStructName}}DefaultKey)}
 }
 
 func New{{.TableStructName}}WithKey(ds lib.Datastore, key []byte) *{{.TableStructName}} {
-	return &{{.TableStructName}}{ds.Mapping(key)}
+	return &{{.TableStructName}}{ds.Value(key)}
 }
 
 func (m *{{.TableStructName}}) Get(
@@ -81,25 +81,23 @@ func (m *{{.TableStructName}}) Get(
 	{{.Name}} {{.Type.GoType}},
 {{- end }}
 ) *{{.RowStructName}} {
-	return New{{.RowStructName}}(
-		m.mapping.
-		{{- range .Schema.Keys -}}
-		{{- if eq .Index (sub (len $.Schema.Keys) 1) -}}
-			Value(codec.{{.Type.EncodeFunc}}({{.Type.Size}}, {{.Name}})),
-		{{- else -}}
-			Mapping(codec.{{.Type.EncodeFunc}}({{.Type.Size}}, {{.Name}})).
-		{{- end -}}
-		{{end}}
+	store := m.store.Mapping().NestedValue(
+		{{- range .Schema.Keys }}
+		codec.{{.Type.EncodeFunc}}({{.Type.Size}}, {{.Name}}),
+		{{- end }}
 	)
+	return New{{.RowStructName}}(store)
 }
 {{- else }}
 type {{.TableStructName}} = {{.RowStructName}}
 
 func New{{.TableStructName}}(ds lib.Datastore) *{{.TableStructName}} {
-	return New{{.RowStructName}}(ds.Value({{.TableStructName}}DefaultKey))
+	store := ds.Value({{.TableStructName}}DefaultKey)
+	return New{{.RowStructName}}(store)
 }
 
 func New{{.TableStructName}}WithKey(ds lib.Datastore, key []byte) *{{.TableStructName}} {
-	return New{{.RowStructName}}(ds.Value(key))
+	store := ds.Value(key)
+	return New{{.RowStructName}}(store)
 }
 {{- end }}

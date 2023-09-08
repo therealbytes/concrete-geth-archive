@@ -15,54 +15,85 @@
 
 package lib
 
+import (
+	"bytes"
+)
+
 type StorageStruct struct {
-	arr     SlotArray
+	store   StoreValue
+	arr     ValueArray
+	ref     Mapping
 	offsets []int
 	sizes   []int
+	cache   [][]byte
 }
 
-func NewStorageStruct(slot StorageSlot, sizes []int) *StorageStruct {
+func NewStorageStruct(store StoreValue, sizes []int) *StorageStruct {
 	var (
-		offset = 0
-		nSlots = 0
+		offset  = 0
+		offsets = make([]int, len(sizes))
+		size    = sizes[0]
 	)
-	offsets := make([]int, len(sizes))
-	for i := 1; i < len(sizes); i++ {
-		size := sizes[i]
+	for ii := 1; ii < len(sizes); ii++ {
+		size = sizes[ii]
 		if offset/32 < (offset+size)/32 {
 			offset = (offset/32 + 1) * 32
-			nSlots++
 		}
 		offset += size
-		offsets[i] = offset
+		offsets[ii] = offset
 	}
-	if offset%32 != 0 {
-		nSlots++
-	}
+	nSlots := (offset + size + 31) / 32
+
 	return &StorageStruct{
-		arr:     slot.SlotArray([]int{nSlots}),
+		store:   store,
+		arr:     store.ValueArray([]int{nSlots}),
+		ref:     store.Mapping(),
 		offsets: offsets,
 		sizes:   sizes,
+		cache:   make([][]byte, len(sizes)),
 	}
 }
 
 func (s *StorageStruct) GetField(index int) []byte {
+	fieldSize := s.sizes[index]
+	if fieldSize == 0 {
+		return nil
+	}
+
+	if len(s.cache[index]) == 0 {
+		s.cache[index] = make([]byte, fieldSize)
+	} else {
+		data := make([]byte, fieldSize)
+		copy(data, s.cache[index])
+		return data
+	}
+
 	absOffset := s.offsets[index]
 	slotIndex, slotOffset := absOffset/32, absOffset%32
 
 	slotData := s.arr.Value(slotIndex).Bytes32()
-	fieldSize := s.sizes[index]
 	return slotData[slotOffset : slotOffset+fieldSize]
 }
 
 func (s *StorageStruct) SetField(index int, data []byte) {
+	fieldSize := s.sizes[index]
+	if fieldSize == 0 {
+		return
+	}
+
+	if len(s.cache[index]) == 0 {
+		s.cache[index] = make([]byte, fieldSize)
+	} else if bytes.Equal(s.cache[index], data) {
+		return
+	}
+
 	absOffset := s.offsets[index]
 	slotIndex, slotOffset := absOffset/32, absOffset%32
 
 	slotRef := s.arr.Value(slotIndex)
 	slotData := slotRef.Bytes32()
-	fieldSize := s.sizes[index]
 	copy(slotData[slotOffset:slotOffset+fieldSize], data)
+	copy(s.cache[index], data)
 
 	slotRef.SetBytes32(slotData)
 }

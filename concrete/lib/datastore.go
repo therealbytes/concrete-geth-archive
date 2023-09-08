@@ -23,13 +23,6 @@ import (
 	"github.com/ethereum/go-ethereum/concrete/crypto"
 )
 
-func keyToHash(key []byte) common.Hash {
-	if len(key) > 32 {
-		return crypto.Keccak256Hash(key)
-	}
-	return common.BytesToHash(key)
-}
-
 type KeyValueStore interface {
 	Set(key common.Hash, value common.Hash)
 	Get(key common.Hash) common.Hash
@@ -72,9 +65,7 @@ func (kv *envEphemeralKV) Get(key common.Hash) common.Hash {
 var _ KeyValueStore = (*envEphemeralKV)(nil)
 
 type Datastore interface {
-	Value(key []byte) StorageSlot
-	Mapping(key []byte) Mapping
-	Array(key []byte) DynamicArray
+	Value(key []byte) StoreValue
 }
 
 type datastore struct {
@@ -85,20 +76,19 @@ func newDatastore(kv KeyValueStore) *datastore {
 	return &datastore{kv: kv}
 }
 
-func (ds *datastore) value(key []byte) *storageSlot {
-	slot := keyToHash(key)
-	return newStorageSlot(ds, slot)
+func (ds *datastore) value(key []byte) *storeValue {
+	if len(key) > 32 {
+		key = crypto.Keccak256(key)
+	}
+	slot := common.BytesToHash(key)
+	return newStoreValue(ds, slot)
 }
 
-func (ds *datastore) mapping(key []byte) *mapping {
-	slot := keyToHash(key)
-	return newMapping(ds, slot)
+func (ds *datastore) Value(key []byte) StoreValue {
+	return ds.value(key)
 }
 
-func (ds *datastore) array(key []byte) *dynamicArray {
-	slot := keyToHash(key)
-	return newDynamicArray(ds, slot)
-}
+var _ Datastore = (*datastore)(nil)
 
 func NewPersistentDatastore(env api.Environment) Datastore {
 	return newDatastore(newEnvPersistentKeyValueStore(env))
@@ -112,21 +102,8 @@ func NewDatastore(env api.Environment) Datastore {
 	return NewPersistentDatastore(env)
 }
 
-func (ds *datastore) Value(key []byte) StorageSlot {
-	return ds.value(key)
-}
-
-func (ds *datastore) Mapping(key []byte) Mapping {
-	return ds.mapping(key)
-}
-
-func (ds *datastore) Array(key []byte) DynamicArray {
-	return ds.array(key)
-}
-
-var _ Datastore = (*datastore)(nil)
-
-type StorageSlot interface {
+type StoreValue interface {
+	// Datastore() Datastore
 	Slot() common.Hash
 	Bytes32() common.Hash
 	SetBytes32(value common.Hash)
@@ -142,36 +119,38 @@ type StorageSlot interface {
 	SetInt64(value int64)
 	Bytes() []byte
 	SetBytes(value []byte)
-	SlotArray(length []int) SlotArray
+	ValueArray(length []int) ValueArray // TODO: alt name for value?
 	BytesArray(length []int, itemSize int) BytesArray
+	Mapping() Mapping
+	DynamicArray() DynamicArray // TODO: optional initial size pass size?
 }
 
-type storageSlot struct {
+type storeValue struct {
 	ds       *datastore
 	slot     common.Hash
 	slotHash common.Hash
 }
 
-func newStorageSlot(ds *datastore, slot common.Hash) *storageSlot {
-	return &storageSlot{ds: ds, slot: slot}
+func newStoreValue(ds *datastore, slot common.Hash) *storeValue {
+	return &storeValue{ds: ds, slot: slot}
 }
 
-func (r *storageSlot) getSlotHash() common.Hash {
+func (r *storeValue) getSlotHash() common.Hash {
 	if r.slotHash == (common.Hash{}) {
 		r.slotHash = crypto.Keccak256Hash(r.slot.Bytes())
 	}
 	return r.slotHash
 }
 
-func (r *storageSlot) getBytes32() common.Hash {
+func (r *storeValue) getBytes32() common.Hash {
 	return r.ds.kv.Get(r.slot)
 }
 
-func (r *storageSlot) setBytes32(value common.Hash) {
+func (r *storeValue) setBytes32(value common.Hash) {
 	r.ds.kv.Set(r.slot, value)
 }
 
-func (r *storageSlot) getBytes() []byte {
+func (r *storeValue) getBytes() []byte {
 	slotData := r.ds.kv.Get(r.slot)
 	lsb := slotData[len(slotData)-1]
 	isShort := lsb&1 == 0
@@ -192,7 +171,7 @@ func (r *storageSlot) getBytes() []byte {
 	return data
 }
 
-func (r *storageSlot) setBytes(value []byte) {
+func (r *storeValue) setBytes(value []byte) {
 	isShort := len(value) <= 31
 	if isShort {
 		var data common.Hash
@@ -214,31 +193,43 @@ func (r *storageSlot) setBytes(value []byte) {
 	}
 }
 
-func (r *storageSlot) slotArray(length []int) *slotArray {
-	return newSlotArray(r.ds, r.slot, length)
+func (r *storeValue) valueArray(length []int) *valueArray {
+	return newValueArray(r.ds, r.slot, length)
 }
 
-func (r *storageSlot) bytesArray(length []int, itemSize int) *bytesArray {
+func (r *storeValue) bytesArray(length []int, itemSize int) *bytesArray {
 	return newBytesArray(r.ds, r.slot, length, itemSize)
 }
 
-func (r *storageSlot) Slot() common.Hash {
+func (r *storeValue) mapping() *mapping {
+	return newMapping(r.ds, r.slot)
+}
+
+func (r *storeValue) array() *dynamicArray {
+	return newDynamicArray(r.ds, r.slot)
+}
+
+// func (r *storeValue) Datastore() Datastore {
+// 	return r.ds
+// }
+
+func (r *storeValue) Slot() common.Hash {
 	return r.slot
 }
 
-func (r *storageSlot) Bytes32() common.Hash {
+func (r *storeValue) Bytes32() common.Hash {
 	return r.getBytes32()
 }
 
-func (r *storageSlot) SetBytes32(value common.Hash) {
+func (r *storeValue) SetBytes32(value common.Hash) {
 	r.setBytes32(value)
 }
 
-func (r *storageSlot) Bool() bool {
+func (r *storeValue) Bool() bool {
 	return r.getBytes32().Big().Cmp(common.Big0) != 0
 }
 
-func (r *storageSlot) SetBool(value bool) {
+func (r *storeValue) SetBool(value bool) {
 	if value {
 		r.setBytes32(common.BigToHash(common.Big0))
 	} else {
@@ -246,70 +237,78 @@ func (r *storageSlot) SetBool(value bool) {
 	}
 }
 
-func (r *storageSlot) Address() common.Address {
+func (r *storeValue) Address() common.Address {
 	return common.BytesToAddress(r.getBytes32().Bytes())
 }
 
-func (r *storageSlot) SetAddress(value common.Address) {
+func (r *storeValue) SetAddress(value common.Address) {
 	r.setBytes32(common.BytesToHash(value.Bytes()))
 }
 
-func (r *storageSlot) Big() *big.Int {
+func (r *storeValue) Big() *big.Int {
 	return r.getBytes32().Big()
 }
 
-func (r *storageSlot) SetBig(value *big.Int) {
+func (r *storeValue) SetBig(value *big.Int) {
 	r.setBytes32(common.BigToHash(value))
 }
 
-func (r *storageSlot) SetUint64(value uint64) {
+func (r *storeValue) SetUint64(value uint64) {
 	r.SetBig(new(big.Int).SetUint64(value))
 }
 
-func (r *storageSlot) Uint64() uint64 {
+func (r *storeValue) Uint64() uint64 {
 	return r.Big().Uint64()
 }
 
-func (r *storageSlot) SetInt64(value int64) {
+func (r *storeValue) SetInt64(value int64) {
 	r.SetBig(big.NewInt(value))
 }
 
-func (r *storageSlot) Int64() int64 {
+func (r *storeValue) Int64() int64 {
 	return r.Big().Int64()
 }
 
-func (r *storageSlot) Bytes() []byte {
+func (r *storeValue) Bytes() []byte {
 	return r.getBytes()
 }
 
-func (r *storageSlot) SetBytes(value []byte) {
+func (r *storeValue) SetBytes(value []byte) {
 	r.setBytes(value)
 }
 
-func (r *storageSlot) SlotArray(length []int) SlotArray {
-	return r.slotArray(length)
+func (r *storeValue) ValueArray(length []int) ValueArray {
+	return r.valueArray(length)
 }
 
-func (r *storageSlot) BytesArray(length []int, itemSize int) BytesArray {
+func (r *storeValue) BytesArray(length []int, itemSize int) BytesArray {
 	return r.bytesArray(length, itemSize)
 }
 
-var _ StorageSlot = (*storageSlot)(nil)
-
-type SlotArray interface {
-	Length() int
-	Value(index ...int) StorageSlot
-	SlotArray(index ...int) SlotArray
+func (r *storeValue) Mapping() Mapping {
+	return r.mapping()
 }
 
-type slotArray struct {
+func (r *storeValue) DynamicArray() DynamicArray {
+	return r.array()
+}
+
+var _ StoreValue = (*storeValue)(nil)
+
+type ValueArray interface {
+	Length() int
+	Value(index ...int) StoreValue
+	ValueArray(index ...int) ValueArray
+}
+
+type valueArray struct {
 	ds         *datastore
 	slot       common.Hash
 	length     []int
 	flatLength []int
 }
 
-func newSlotArray(ds *datastore, slot common.Hash, length []int) *slotArray {
+func newValueArray(ds *datastore, slot common.Hash, length []int) *valueArray {
 	if len(length) == 0 {
 		return nil
 	}
@@ -324,10 +323,10 @@ func newSlotArray(ds *datastore, slot common.Hash, length []int) *slotArray {
 			flatLength[ii] = flatLength[ii+1] * length[ii+1]
 		}
 	}
-	return &slotArray{ds: ds, slot: slot, length: length, flatLength: flatLength}
+	return &valueArray{ds: ds, slot: slot, length: length, flatLength: flatLength}
 }
 
-func (a *slotArray) indexSlot(index []int) *common.Hash {
+func (a *valueArray) indexSlot(index []int) *common.Hash {
 	if len(index) > len(a.length) {
 		return nil
 	}
@@ -343,11 +342,11 @@ func (a *slotArray) indexSlot(index []int) *common.Hash {
 	return &slot
 }
 
-func (a *slotArray) getLength() int {
+func (a *valueArray) getLength() int {
 	return a.length[0]
 }
 
-func (a *slotArray) value(index []int) *storageSlot {
+func (a *valueArray) value(index []int) *storeValue {
 	if len(index) != len(a.length) {
 		return nil
 	}
@@ -355,10 +354,10 @@ func (a *slotArray) value(index []int) *storageSlot {
 	if slot == nil {
 		return nil
 	}
-	return newStorageSlot(a.ds, *slot)
+	return newStoreValue(a.ds, *slot)
 }
 
-func (a *slotArray) slotArray(index []int) *slotArray {
+func (a *valueArray) valueArray(index []int) *valueArray {
 	if len(index) == 0 {
 		return a
 	}
@@ -370,22 +369,22 @@ func (a *slotArray) slotArray(index []int) *slotArray {
 		return nil
 	}
 	length := a.length[len(index):]
-	return newSlotArray(a.ds, *slot, length)
+	return newValueArray(a.ds, *slot, length)
 }
 
-func (a *slotArray) Length() int {
+func (a *valueArray) Length() int {
 	return a.getLength()
 }
 
-func (a *slotArray) Value(index ...int) StorageSlot {
+func (a *valueArray) Value(index ...int) StoreValue {
 	return a.value(index)
 }
 
-func (a *slotArray) SlotArray(index ...int) SlotArray {
-	return a.slotArray(index)
+func (a *valueArray) ValueArray(index ...int) ValueArray {
+	return a.valueArray(index)
 }
 
-var _ SlotArray = (*slotArray)(nil)
+var _ ValueArray = (*valueArray)(nil)
 
 type BytesArray interface {
 	Length() int
@@ -394,7 +393,7 @@ type BytesArray interface {
 }
 
 type bytesArray struct {
-	arr      slotArray
+	arr      valueArray
 	itemSize int
 }
 
@@ -416,7 +415,7 @@ func newBytesArray(ds *datastore, slot common.Hash, _length []int, itemSize int)
 		slotsPerItem := (itemSize + 31) / 32
 		length[len(length)-1] *= slotsPerItem
 	}
-	return &bytesArray{arr: slotArray{ds: ds, slot: slot, length: length}, itemSize: itemSize}
+	return &bytesArray{arr: *newValueArray(ds, slot, length), itemSize: itemSize}
 }
 
 func (a *bytesArray) getLength() int {
@@ -496,7 +495,7 @@ var _ BytesArray = (*bytesArray)(nil)
 
 type Mapping interface {
 	Datastore
-	NestedValue(keys ...[]byte) StorageSlot
+	NestedValue(keys ...[]byte) StoreValue
 }
 
 type mapping struct {
@@ -509,20 +508,12 @@ func newMapping(ds *datastore, slot common.Hash) *mapping {
 }
 
 func (m *mapping) keySlot(key []byte) common.Hash {
-	return crypto.Keccak256Hash(keyToHash(key).Bytes(), m.slot.Bytes())
+	return crypto.Keccak256Hash(key, m.slot.Bytes())
 }
 
-func (m *mapping) value(key []byte) *storageSlot {
+func (m *mapping) value(key []byte) *storeValue {
 	slot := m.keySlot(key)
-	return newStorageSlot(m.ds, slot)
-}
-
-func (m *mapping) nestedValue(keys [][]byte) *storageSlot {
-	currentMapping := m
-	for _, key := range keys {
-		currentMapping = currentMapping.mapping(key)
-	}
-	return m.ds.value(currentMapping.slot.Bytes())
+	return newStoreValue(m.ds, slot)
 }
 
 func (m *mapping) mapping(key []byte) *mapping {
@@ -530,120 +521,112 @@ func (m *mapping) mapping(key []byte) *mapping {
 	return newMapping(m.ds, slot)
 }
 
-func (m *mapping) array(key []byte) *dynamicArray {
-	slot := m.keySlot(key)
-	return newDynamicArray(m.ds, slot)
+func (m *mapping) nestedValue(keys [][]byte) *storeValue {
+	if len(keys) == 0 {
+		return nil
+	}
+	currentMapping := m
+	nestedKeys, mapKey := keys[:len(keys)-1], keys[len(keys)-1]
+	for _, key := range nestedKeys {
+		currentMapping = currentMapping.mapping(key)
+	}
+	return currentMapping.value(mapKey)
 }
 
-func (m *mapping) Value(key []byte) StorageSlot {
+func (m *mapping) Value(key []byte) StoreValue {
 	return m.value(key)
 }
 
-func (m *mapping) NestedValue(keys ...[]byte) StorageSlot {
+func (m *mapping) NestedValue(keys ...[]byte) StoreValue {
 	return m.nestedValue(keys)
-}
-
-func (m *mapping) Mapping(key []byte) Mapping {
-	return m.mapping(key)
-}
-
-func (m *mapping) Array(key []byte) DynamicArray {
-	return m.array(key)
 }
 
 var _ Mapping = (*mapping)(nil)
 
 type DynamicArray interface {
 	Length() int
-	Value(index int) StorageSlot
-	NestedValue(indexes ...int) StorageSlot
-	Push() StorageSlot
-	Pop() StorageSlot
-	Mapping(index int) Mapping
-	Array(index int) DynamicArray
+	Value(index int) StoreValue
+	NestedValue(indexes ...int) StoreValue
+	Push() StoreValue
+	Pop() StoreValue
 }
 
 type dynamicArray struct {
-	ds   *datastore
-	slot common.Hash
+	storeValue storeValue
 }
 
 func newDynamicArray(ds *datastore, slot common.Hash) *dynamicArray {
-	return &dynamicArray{ds: ds, slot: slot}
+	return &dynamicArray{
+		storeValue: *newStoreValue(ds, slot),
+	}
 }
 
 // Dynamic arrays are laid out on memory like solidity mappings (same as the mappings above),
 // but storing the length of the array in the slot.
 // Note this is different from the layout of solidity dynamic arrays, which are laid out
 // contiguously.
-func (m *dynamicArray) indexSlot(index int) common.Hash {
-	return crypto.Keccak256Hash(
-		common.BigToHash(big.NewInt(int64(index))).Bytes(),
-		m.slot.Bytes(),
-	)
+func (m *dynamicArray) indexKey(index int) []byte {
+	if index >= m.getLength() || index < 0 {
+		return nil
+	}
+	bigIndex := big.NewInt(int64(index))
+	return common.BigToHash(bigIndex).Bytes()
 }
 
 func (a *dynamicArray) setLength(length int) {
-	a.ds.kv.Set(a.slot, common.BigToHash(big.NewInt(int64(length))))
+	bigLength := big.NewInt(int64(length))
+	a.storeValue.SetBytes32(common.BigToHash(bigLength))
 }
 
 func (a *dynamicArray) getLength() int {
-	return int(a.ds.kv.Get(a.slot).Big().Int64())
+	bigLength := a.storeValue.Big()
+	return int(bigLength.Int64())
 }
 
-func (a *dynamicArray) value(index int) *storageSlot {
-	if index >= a.getLength() || index < 0 {
+func (a *dynamicArray) value(index int) *storeValue {
+	key := a.indexKey(index)
+	if key == nil {
 		return nil
 	}
-	slot := a.indexSlot(index)
-	return newStorageSlot(a.ds, slot)
+	return a.storeValue.mapping().value(key)
 }
 
-func (a *dynamicArray) nestedValue(indexes []int) *storageSlot {
-	currentArray := a
-	for _, index := range indexes {
-		currentArray = currentArray.array(index)
+func (a *dynamicArray) nestedValue(indexes []int) *storeValue {
+	if len(indexes) == 0 {
+		return nil
 	}
-	return a.ds.value(currentArray.slot.Bytes())
-}
-
-func (a *dynamicArray) mapping(index int) *mapping {
-	slot := a.indexSlot(index)
-	return newMapping(a.ds, slot)
-}
-
-func (a *dynamicArray) array(index int) *dynamicArray {
-	slot := a.indexSlot(index)
-	return newDynamicArray(a.ds, slot)
+	if len(indexes) >= a.getLength() {
+		return nil
+	}
+	keys := make([][]byte, len(indexes))
+	for ii := 0; ii < len(indexes); ii++ {
+		keys[ii] = a.indexKey(indexes[ii])
+		if keys[ii] == nil {
+			return nil
+		}
+	}
+	return a.storeValue.mapping().nestedValue(keys)
 }
 
 func (a *dynamicArray) Length() int {
 	return a.getLength()
 }
 
-func (a *dynamicArray) Value(index int) StorageSlot {
+func (a *dynamicArray) Value(index int) StoreValue {
 	return a.value(index)
 }
 
-func (a *dynamicArray) NestedValue(indexes ...int) StorageSlot {
+func (a *dynamicArray) NestedValue(indexes ...int) StoreValue {
 	return a.nestedValue(indexes)
 }
 
-func (m *dynamicArray) Mapping(index int) Mapping {
-	return m.mapping(index)
-}
-
-func (m *dynamicArray) Array(index int) DynamicArray {
-	return m.array(index)
-}
-
-func (a *dynamicArray) Push() StorageSlot {
+func (a *dynamicArray) Push() StoreValue {
 	length := a.getLength()
 	a.setLength(length + 1)
 	return a.value(length)
 }
 
-func (a *dynamicArray) Pop() StorageSlot {
+func (a *dynamicArray) Pop() StoreValue {
 	length := a.getLength()
 	if length == 0 {
 		return nil
