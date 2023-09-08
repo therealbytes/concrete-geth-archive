@@ -69,11 +69,11 @@ type {{.TableStructName}} struct {
 }
 
 func New{{.TableStructName}}(ds lib.Datastore) *{{.TableStructName}} {
-	return &{{.TableStructName}}{ds.Value({{.TableStructName}}DefaultKey)}
+	return &{{.TableStructName}}{ds.Get({{.TableStructName}}DefaultKey)}
 }
 
 func New{{.TableStructName}}WithKey(ds lib.Datastore, key []byte) *{{.TableStructName}} {
-	return &{{.TableStructName}}{ds.Value(key)}
+	return &{{.TableStructName}}{ds.Get(key)}
 }
 
 func (m *{{.TableStructName}}) Get(
@@ -81,7 +81,7 @@ func (m *{{.TableStructName}}) Get(
 	{{.Name}} {{.Type.GoType}},
 {{- end }}
 ) *{{.RowStructName}} {
-	store := m.store.Mapping().NestedValue(
+	store := m.store.Mapping().GetNested(
 		{{- range .Schema.Keys }}
 		codec.{{.Type.EncodeFunc}}({{.Type.Size}}, {{.Name}}),
 		{{- end }}
@@ -92,12 +92,12 @@ func (m *{{.TableStructName}}) Get(
 type {{.TableStructName}} = {{.RowStructName}}
 
 func New{{.TableStructName}}(ds lib.Datastore) *{{.TableStructName}} {
-	store := ds.Value({{.TableStructName}}DefaultKey)
+	store := ds.Get({{.TableStructName}}DefaultKey)
 	return New{{.RowStructName}}(store)
 }
 
 func New{{.TableStructName}}WithKey(ds lib.Datastore, key []byte) *{{.TableStructName}} {
-	store := ds.Value(key)
+	store := ds.Get(key)
 	return New{{.RowStructName}}(store)
 }
 {{- end }}

@@ -58,20 +58,20 @@ type Kkv struct {
 }
 
 func NewKkv(ds lib.Datastore) *Kkv {
-	return &Kkv{ds.Value(KkvDefaultKey)}
+	return &Kkv{ds.Get(KkvDefaultKey)}
 }
 
 func NewKkvWithKey(ds lib.Datastore, key []byte) *Kkv {
-	return &Kkv{ds.Value(key)}
+	return &Kkv{ds.Get(key)}
 }
 
 func (m *Kkv) Get(
-	key2 common.Hash,
 	key1 common.Hash,
+	key2 common.Hash,
 ) *KkvRow {
-	store := m.store.Mapping().NestedValue(
-		codec.EncodeHash(32, key2),
+	store := m.store.Mapping().GetNested(
 		codec.EncodeHash(32, key1),
+		codec.EncodeHash(32, key2),
 	)
 	return NewKkvRow(store)
 }

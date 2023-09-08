@@ -68,7 +68,7 @@ func (s *DatastoreStruct) GetField(index int) []byte {
 
 	absOffset := s.offsets[index]
 	slotIndex, slotOffset := absOffset/32, absOffset%32
-	slotData := s.arr.Value(slotIndex).Bytes32()
+	slotData := s.arr.Get(slotIndex).Bytes32()
 	return slotData[slotOffset : slotOffset+fieldSize]
 }
 
@@ -86,7 +86,7 @@ func (s *DatastoreStruct) SetField(index int, data []byte) {
 
 	absOffset := s.offsets[index]
 	slotIndex, slotOffset := absOffset/32, absOffset%32
-	slotRef := s.arr.Value(slotIndex)
+	slotRef := s.arr.Get(slotIndex)
 	slotData := slotRef.Bytes32()
 
 	copy(slotData[slotOffset:slotOffset+fieldSize], data)
@@ -97,7 +97,7 @@ func (s *DatastoreStruct) SetField(index int, data []byte) {
 func (s *DatastoreStruct) GetField_bytes(index int) []byte {
 	absOffset := s.offsets[index]
 	slotIndex := absOffset / 32
-	slotData := s.arr.Value(slotIndex).Bytes()
+	slotData := s.arr.Get(slotIndex).Bytes()
 	return slotData
 }
 
@@ -108,7 +108,7 @@ func (s *DatastoreStruct) SetField_bytes(index int, data []byte) {
 
 	absOffset := s.offsets[index]
 	slotIndex := absOffset / 32
-	slotRef := s.arr.Value(slotIndex)
+	slotRef := s.arr.Get(slotIndex)
 
 	dataCopy := make([]byte, len(data))
 	copy(dataCopy, data)

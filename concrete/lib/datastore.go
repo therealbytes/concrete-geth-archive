@@ -65,7 +65,7 @@ func (kv *envEphemeralKV) Get(key common.Hash) common.Hash {
 var _ KeyValueStore = (*envEphemeralKV)(nil)
 
 type Datastore interface {
-	Value(key []byte) DatastoreSlot
+	Get(key []byte) DatastoreSlot
 }
 
 type datastore struct {
@@ -84,7 +84,7 @@ func (ds *datastore) value(key []byte) *dsSlot {
 	return newDatastoreSlot(ds, slot)
 }
 
-func (ds *datastore) Value(key []byte) DatastoreSlot {
+func (ds *datastore) Get(key []byte) DatastoreSlot {
 	return ds.value(key)
 }
 
@@ -302,7 +302,7 @@ var _ DatastoreSlot = (*dsSlot)(nil)
 
 type SlotArray interface {
 	Length() int
-	Value(index ...int) DatastoreSlot
+	Get(index ...int) DatastoreSlot
 	SlotArray(index ...int) SlotArray
 }
 
@@ -381,7 +381,7 @@ func (a *slotArray) Length() int {
 	return a.getLength()
 }
 
-func (a *slotArray) Value(index ...int) DatastoreSlot {
+func (a *slotArray) Get(index ...int) DatastoreSlot {
 	return a.value(index)
 }
 
@@ -393,7 +393,7 @@ var _ SlotArray = (*slotArray)(nil)
 
 type BytesArray interface {
 	Length() int
-	Value(index ...int) []byte
+	Get(index ...int) []byte
 	BytesArray(index ...int) BytesArray
 }
 
@@ -490,7 +490,7 @@ func (a *bytesArray) Length() int {
 	return a.getLength()
 }
 
-func (a *bytesArray) Value(index ...int) []byte {
+func (a *bytesArray) Get(index ...int) []byte {
 	return a.value(index)
 }
 
@@ -502,7 +502,7 @@ var _ BytesArray = (*bytesArray)(nil)
 
 type Mapping interface {
 	Datastore
-	NestedValue(keys ...[]byte) DatastoreSlot
+	GetNested(keys ...[]byte) DatastoreSlot
 }
 
 type mapping struct {
@@ -540,11 +540,11 @@ func (m *mapping) nestedValue(keys [][]byte) *dsSlot {
 	return currentMapping.value(mapKey)
 }
 
-func (m *mapping) Value(key []byte) DatastoreSlot {
+func (m *mapping) Get(key []byte) DatastoreSlot {
 	return m.value(key)
 }
 
-func (m *mapping) NestedValue(keys ...[]byte) DatastoreSlot {
+func (m *mapping) GetNested(keys ...[]byte) DatastoreSlot {
 	return m.nestedValue(keys)
 }
 
@@ -552,8 +552,8 @@ var _ Mapping = (*mapping)(nil)
 
 type DynamicArray interface {
 	Length() int
-	Value(index int) DatastoreSlot
-	NestedValue(indexes ...int) DatastoreSlot
+	Get(index int) DatastoreSlot
+	GetNested(indexes ...int) DatastoreSlot
 	Push() DatastoreSlot
 	Pop() DatastoreSlot
 }
@@ -617,11 +617,11 @@ func (a *dynamicArray) Length() int {
 	return a.getLength()
 }
 
-func (a *dynamicArray) Value(index int) DatastoreSlot {
+func (a *dynamicArray) Get(index int) DatastoreSlot {
 	return a.value(index)
 }
 
-func (a *dynamicArray) NestedValue(indexes ...int) DatastoreSlot {
+func (a *dynamicArray) GetNested(indexes ...int) DatastoreSlot {
 	return a.nestedValue(indexes)
 }
 
