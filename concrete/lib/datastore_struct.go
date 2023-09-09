@@ -94,30 +94,23 @@ func (s *DatastoreStruct) SetField(index int, data []byte) {
 	slotRef.SetBytes32(slotData)
 }
 
-func (s *DatastoreStruct) GetField_bytes(index int) []byte {
+func (s *DatastoreStruct) GetField_slot(index int) DatastoreSlot {
 	absOffset := s.offsets[index]
 	slotIndex := absOffset / 32
-	slotData := s.arr.Get(slotIndex).Bytes()
-	return slotData
+	return s.arr.Get(slotIndex)
+}
+
+func (s *DatastoreStruct) GetField_bytes(index int) []byte {
+	slotRef := s.GetField_slot(index)
+	return slotRef.Bytes()
 }
 
 func (s *DatastoreStruct) SetField_bytes(index int, data []byte) {
 	if bytes.Equal(s.cache[index], data) {
 		return
 	}
-
-	absOffset := s.offsets[index]
-	slotIndex := absOffset / 32
-	slotRef := s.arr.Get(slotIndex)
-
-	dataCopy := make([]byte, len(data))
-	copy(dataCopy, data)
-	s.cache[index] = dataCopy
+	s.cache[index] = make([]byte, len(data))
+	copy(s.cache[index], data)
+	slotRef := s.GetField_slot(index)
 	slotRef.SetBytes(data)
-}
-
-func (s *DatastoreStruct) GetField_slot(index int) DatastoreSlot {
-	absOffset := s.offsets[index]
-	slotIndex := absOffset / 32
-	return s.arr.Get(slotIndex)
 }
