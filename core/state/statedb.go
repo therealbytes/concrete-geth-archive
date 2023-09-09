@@ -270,9 +270,10 @@ func (s *StateDB) addEphemeralPreimage(hash common.Hash, preimage []byte) {
 }
 
 func (s *StateDB) getEphemeralPreimage(hash common.Hash) []byte {
-	preimage := make([]byte, len(s.ephemeralPreimages[hash]))
-	copy(preimage, s.ephemeralPreimages[hash])
-	return preimage
+	preimage := s.ephemeralPreimages[hash]
+	pi := make([]byte, len(preimage))
+	copy(pi, preimage)
+	return pi
 }
 
 func (s *StateDB) AddEphemeralPreimage(hash common.Hash, preimage []byte) {
