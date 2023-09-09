@@ -33,36 +33,52 @@ func New{{.RowStructName}}(store lib.DatastoreSlot) *{{.RowStructName}} {
 
 func (v *{{$.RowStructName}}) Get() (
 {{- range .Schema.Values }}
-	{{.Type.GoType}},
+	{{if eq .Type.Type 2}}*{{end}}{{.Type.GoType}},
 {{- end }}
 ) {
-	return {{ range .Schema.Values -}}
-		codec.{{.Type.DecodeFunc}}(
-			{{- .Type.Size }}, v.GetField{{.Type.FieldMod}}({{.Index}}))
-			{{- if eq .Index (sub (len $.Schema.Values) 1) }}{{else}}, {{end}}
+	return {{ range .Schema.Values }}
+		{{- if lt .Type.Type 2 -}}
+		codec.{{.Type.DecodeFunc}}({{.Type.Size}}, {{if eq .Type.Type 0}}v.GetField{{else}}v.GetField_bytes{{end}}({{.Index}}))
+		{{- else -}}
+		&{{.Type.GoType}}{v.GetField_slot({{.Index}})}
+		{{- end }}
+		{{- if ne .Index (sub (len $.Schema.Values) 1) }},
+		{{end}}
 	{{- end }}
 }
 
 func (v *{{$.RowStructName}}) Set(
 {{- range .Schema.Values }}
+{{- if lt .Type.Type 2 }}
 	{{.Name}} {{.Type.GoType}},
+{{- end }}
 {{- end }}
 ) {
 {{- range .Schema.Values }}
-	v.SetField{{.Type.FieldMod}}({{.Index}}, codec.{{.Type.EncodeFunc}}({{.Type.Size}}, {{.Name}}))
+{{- if lt .Type.Type 2 }}
+	{{if eq .Type.Type 0}}v.SetField{{else if eq .Type.Type 1}}v.SetField_bytes{{end -}}
+	({{ .Index }}, codec.{{.Type.EncodeFunc}}({{.Type.Size}}, {{.Name}}))
+{{- end }}
 {{- end }}
 }
 {{range .Schema.Values}}
+{{- if lt .Type.Type 2 }}
 func (v *{{$.RowStructName}}) Get{{.Title}}() {{.Type.GoType}} {
-	data := v.GetField{{.Type.FieldMod}}({{.Index}})
+	data := {{if eq .Type.Type 0}}v.GetField{{else}}v.GetField_bytes{{end}}({{.Index}})
 	return codec.{{.Type.DecodeFunc}}({{.Type.Size}}, data)
 }
 
 func (v *{{$.RowStructName}}) Set{{.Title}}(value {{.Type.GoType}}) {
 	data := codec.{{.Type.EncodeFunc}}({{.Type.Size}}, value)
-	v.SetField{{.Type.FieldMod}}({{.Index}}, data)
+	{{if eq .Type.Type 0}}v.SetField{{else}}v.SetField_bytes{{end}}({{.Index}}, data)
 }
-{{end}}
+{{ else }}
+func (v *{{$.RowStructName}}) Get{{.Title}}() *{{.Type.GoType}} {
+	dsSlot := v.GetField_slot({{.Index}})
+	return &{{.Type.GoType}}{dsSlot}
+}
+{{ end}}
+{{- end}}
 {{- if .Schema.Keys }}
 type {{.TableStructName}} struct {
 	store lib.DatastoreSlot

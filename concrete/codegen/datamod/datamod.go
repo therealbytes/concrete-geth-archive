@@ -51,6 +51,15 @@ func upperFirstLetter(str string) string {
 	return string(runes)
 }
 
+func contains(tableNames []string, tableName string) bool {
+	for _, _tableName := range tableNames {
+		if tableName == _tableName {
+			return true
+		}
+	}
+	return false
+}
+
 func isValidName(name string) bool {
 	if len(name) == 0 {
 		return false
@@ -128,6 +137,9 @@ func unmarshalTableSchemas(jsonContent []byte) ([]TableSchema, error) {
 				if err != nil {
 					return []TableSchema{}, err
 				}
+				if fieldSchema.Type.Type == TableType {
+					return []TableSchema{}, fmt.Errorf("table '%s' cannot have table keys", tableName)
+				}
 				tableSchema.Keys = append(tableSchema.Keys, fieldSchema)
 			}
 		}
@@ -149,6 +161,11 @@ func unmarshalTableSchemas(jsonContent []byte) ([]TableSchema, error) {
 			fieldSchema, err := newFieldSchema(valueName, len(tableSchema.Values), valueType)
 			if err != nil {
 				return []TableSchema{}, err
+			}
+			if fieldSchema.Type.Type == TableType {
+				if !contains(jsonSchemas.Keys(), fieldSchema.Type.Name) {
+					return []TableSchema{}, fmt.Errorf("table name '%s' table in '%s' does not match any tables", fieldSchema.Type.Name, tableName)
+				}
 			}
 			tableSchema.Values = append(tableSchema.Values, fieldSchema)
 		}

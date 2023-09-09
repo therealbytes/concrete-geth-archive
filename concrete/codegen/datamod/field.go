@@ -21,16 +21,24 @@ import (
 	"strings"
 )
 
+const (
+	ValueType = iota
+	BytesType
+	TableType
+)
+
 type FieldType struct {
 	Name       string
+	Type       int
 	Size       int
 	GoType     string
-	FieldMod   string
 	EncodeFunc string
 	DecodeFunc string
 }
 
 func nameToFieldType(name string) (FieldType, error) {
+	name = strings.ToLower(name)
+
 	switch name {
 	case "address":
 		return FieldType{
@@ -57,17 +65,18 @@ func nameToFieldType(name string) (FieldType, error) {
 			Name:       "bytes",
 			Size:       32,
 			GoType:     "[]byte",
-			FieldMod:   "_bytes",
 			EncodeFunc: "EncodeFixedBytes",
 			DecodeFunc: "DecodeFixedBytes",
+			Type:       BytesType,
 		}, nil
 	case "string":
 		return FieldType{
 			Name:       "string",
+			Size:       32,
 			GoType:     "string",
-			FieldMod:   "_bytes",
 			EncodeFunc: "EncodeString",
 			DecodeFunc: "DecodeString",
+			Type:       BytesType,
 		}, nil
 	default:
 	}
@@ -144,5 +153,19 @@ func nameToFieldType(name string) (FieldType, error) {
 		fieldType.DecodeFunc = "Decode" + codecSufix
 		return fieldType, nil
 	}
+
+	if strings.HasPrefix(name, "table ") {
+		tableName := strings.TrimPrefix(name, "table ")
+		if !isValidName(tableName) {
+			return FieldType{}, fmt.Errorf("invalid table name %s", tableName)
+		}
+		return FieldType{
+			Name:   tableName,
+			Size:   32,
+			GoType: upperFirstLetter(tableName),
+			Type:   TableType,
+		}, nil
+	}
+
 	return FieldType{}, fmt.Errorf("unknown field type %s", name)
 }

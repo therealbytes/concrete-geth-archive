@@ -115,3 +115,9 @@ func (s *DatastoreStruct) SetField_bytes(index int, data []byte) {
 	s.cache[index] = dataCopy
 	slotRef.SetBytes(data)
 }
+
+func (s *DatastoreStruct) GetField_slot(index int) DatastoreSlot {
+	absOffset := s.offsets[index]
+	slotIndex := absOffset / 32
+	return s.arr.Get(slotIndex)
+}
