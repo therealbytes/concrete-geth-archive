@@ -87,7 +87,7 @@ func newFieldSchema(name string, index int, typeStr string) (FieldSchema, error)
 	}
 	fieldType, err := nameToFieldType(typeStr)
 	if err != nil {
-		return FieldSchema{}, err
+		return FieldSchema{}, fmt.Errorf("invalid type '%s' for field '%s': %w", typeStr, name, err)
 	}
 	return FieldSchema{
 		Name:  lowerFirstLetter(name),
@@ -164,7 +164,7 @@ func unmarshalTableSchemas(jsonContent []byte) ([]TableSchema, error) {
 			}
 			if fieldSchema.Type.Type == TableType {
 				if !contains(jsonSchemas.Keys(), fieldSchema.Type.Name) {
-					return []TableSchema{}, fmt.Errorf("table name '%s' table in '%s' does not match any tables", fieldSchema.Type.Name, tableName)
+					return []TableSchema{}, fmt.Errorf("table name '%s' in '%s' does not match any tables", fieldSchema.Type.Name, tableName)
 				}
 			}
 			tableSchema.Values = append(tableSchema.Values, fieldSchema)
