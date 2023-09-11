@@ -51,13 +51,12 @@ func upperFirstLetter(str string) string {
 	return string(runes)
 }
 
-func contains(tableNames []string, tableName string) bool {
-	for _, _tableName := range tableNames {
-		if tableName == _tableName {
-			return true
-		}
-	}
-	return false
+func formatTableName(tableName string) string {
+	return upperFirstLetter(tableName)
+}
+
+func formatRowName(tableName string) string {
+	return upperFirstLetter(tableName) + "Row"
 }
 
 func isValidName(name string) bool {
@@ -163,8 +162,9 @@ func unmarshalTableSchemas(jsonContent []byte) ([]TableSchema, error) {
 				return []TableSchema{}, err
 			}
 			if fieldSchema.Type.Type == TableType {
-				if !contains(jsonSchemas.Keys(), fieldSchema.Type.Name) {
-					return []TableSchema{}, fmt.Errorf("table name '%s' in '%s' does not match any tables", fieldSchema.Type.Name, tableName)
+				_, ok := jsonSchemas.Get(fieldSchema.Type.Name)
+				if !ok {
+					return []TableSchema{}, fmt.Errorf("table '%s' does not exist", fieldSchema.Type.Name)
 				}
 			}
 			tableSchema.Values = append(tableSchema.Values, fieldSchema)
@@ -203,8 +203,8 @@ func GenerateDataModel(config Config) error {
 	}
 
 	for _, schema := range schemas {
-		tableName := schema.Name
-		rowName := schema.Name + "Row"
+		tableName := formatTableName(schema.Name)
+		rowName := formatRowName(schema.Name)
 
 		_sizes := make([]string, len(schema.Values))
 		for i, field := range schema.Values {

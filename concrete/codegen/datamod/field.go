@@ -41,8 +41,6 @@ type FieldType struct {
 }
 
 func nameToFieldType(name string) (FieldType, error) {
-	name = strings.ToLower(name)
-
 	switch name {
 	case "address":
 		return FieldType{
@@ -169,7 +167,7 @@ func nameToFieldType(name string) (FieldType, error) {
 		return FieldType{
 			Name:   tableName,
 			Size:   32,
-			GoType: upperFirstLetter(tableName),
+			GoType: formatTableName(tableName),
 			Type:   TableType,
 		}, nil
 	}
