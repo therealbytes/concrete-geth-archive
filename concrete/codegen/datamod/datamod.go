@@ -22,10 +22,8 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"regexp"
 	"strings"
 	"text/template"
-	"unicode"
 
 	"github.com/iancoleman/orderedmap"
 )
@@ -33,39 +31,9 @@ import (
 //go:embed table.tpl
 var tableTpl string
 
-func lowerFirstLetter(str string) string {
-	if len(str) == 0 {
-		return ""
-	}
-	runes := []rune(str)
-	runes[0] = unicode.ToLower(runes[0])
-	return string(runes)
-}
-
-func upperFirstLetter(str string) string {
-	if len(str) == 0 {
-		return ""
-	}
-	runes := []rune(str)
-	runes[0] = unicode.ToUpper(runes[0])
-	return string(runes)
-}
-
-func formatTableName(tableName string) string {
-	return upperFirstLetter(tableName)
-}
-
-func formatRowName(tableName string) string {
-	return upperFirstLetter(tableName) + "Row"
-}
-
-func isValidName(name string) bool {
-	if len(name) == 0 {
-		return false
-	}
-	re := regexp.MustCompile(`^[a-zA-Z_][a-zA-Z0-9_]*$`)
-	return re.MatchString(name) && len(strings.TrimSpace(name)) == len(name)
-}
+const (
+	AllowTableTypes = false
+)
 
 type FieldSchema struct {
 	Name  string
@@ -162,6 +130,9 @@ func unmarshalTableSchemas(jsonContent []byte) ([]TableSchema, error) {
 				return []TableSchema{}, err
 			}
 			if fieldSchema.Type.Type == TableType {
+				if !AllowTableTypes {
+					return []TableSchema{}, fmt.Errorf("table values cannot be tables")
+				}
 				_, ok := jsonSchemas.Get(fieldSchema.Type.Name)
 				if !ok {
 					return []TableSchema{}, fmt.Errorf("table '%s' does not exist", fieldSchema.Type.Name)

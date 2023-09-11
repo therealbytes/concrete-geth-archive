@@ -27,10 +27,6 @@ const (
 	TableType
 )
 
-const (
-	AllowTableTypes = false
-)
-
 type FieldType struct {
 	Name       string
 	Type       int
@@ -157,9 +153,6 @@ func nameToFieldType(name string) (FieldType, error) {
 	}
 
 	if strings.HasPrefix(name, "table ") {
-		if !AllowTableTypes {
-			return FieldType{}, fmt.Errorf("table types are not allowed")
-		}
 		tableName := strings.TrimPrefix(name, "table ")
 		if !isValidName(tableName) {
 			return FieldType{}, fmt.Errorf("invalid table name %s", tableName)
