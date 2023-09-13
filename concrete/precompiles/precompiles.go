@@ -102,7 +102,7 @@ func GetPrecompileMetadataByName(name string) *PrecompileMetadata {
 
 func RunPrecompile(p Precompile, env *api.Env, input []byte, static bool) (ret []byte, remainingGas uint64, err error) {
 	if static && !p.IsStatic(input) {
-		return nil, env.GetGasLeft(), api.ErrWriteProtection
+		return nil, env.Gas(), api.ErrWriteProtection
 	}
 	output, err := p.Run(env, input)
 	if err == nil {

@@ -300,7 +300,7 @@ func toWordSize(size int) uint64 {
 }
 
 func gasAccountAccessMinusWarm(env *Env, address common.Address) (uint64, error) {
-	if env.statedb.AddressInAccessList(address) {
+	if !env.statedb.AddressInAccessList(address) {
 		env.statedb.AddAddressToAccessList(address)
 		return params.ColdAccountAccessCostEIP2929 - params.WarmStorageReadCostEIP2929, nil
 	}
@@ -308,7 +308,7 @@ func gasAccountAccessMinusWarm(env *Env, address common.Address) (uint64, error)
 }
 
 func gasHashAccess(env *Env, hash common.Hash) (uint64, error) {
-	if env.statedb.HashInAccessList(hash) {
+	if !env.statedb.HashInAccessList(hash) {
 		env.statedb.AddHashToAccessList(hash)
 		return params.ColdSloadCostEIP2929, nil
 	}
@@ -722,7 +722,7 @@ func gasStorageLoad(env *Env, args [][]byte) (uint64, error) {
 		return 0, ErrInvalidInput
 	}
 	key := common.BytesToHash(args[0])
-	if _, slotPresent := env.statedb.SlotInAccessList(env.address, key); slotPresent {
+	if _, slotPresent := env.statedb.SlotInAccessList(env.address, key); !slotPresent {
 		env.statedb.AddSlotToAccessList(env.address, key)
 		return params.ColdSloadCostEIP2929, nil
 	}
