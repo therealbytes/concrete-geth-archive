@@ -17,6 +17,8 @@ package lib
 
 import (
 	"bytes"
+
+	"github.com/ethereum/go-ethereum/common"
 )
 
 type DatastoreStruct struct {
@@ -86,9 +88,15 @@ func (s *DatastoreStruct) SetField(index int, data []byte) {
 	absOffset := s.offsets[index]
 	slotIndex, slotOffset := absOffset/32, absOffset%32
 	slotRef := s.arr.Get(slotIndex)
-	slotData := slotRef.Bytes32()
 
-	copy(slotData[slotOffset:slotOffset+fieldSize], data)
+	var slotData common.Hash
+	if fieldSize < 32 {
+		slotData = slotRef.Bytes32()
+		copy(slotData[slotOffset:slotOffset+fieldSize], data)
+	} else {
+		slotData = common.BytesToHash(data)
+	}
+
 	copy(s.cache[index], data)
 	slotRef.SetBytes32(slotData)
 }
