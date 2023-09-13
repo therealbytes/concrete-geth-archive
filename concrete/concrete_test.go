@@ -23,6 +23,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/common/math"
 	"github.com/ethereum/go-ethereum/concrete/api"
 	"github.com/ethereum/go-ethereum/concrete/fixtures"
 	fixture_datamod "github.com/ethereum/go-ethereum/concrete/fixtures/datamod"
@@ -86,7 +87,7 @@ func TestAddPrecompileFixture(t *testing.T) {
 		precompiles.AddPrecompile(impl.address, impl.pc)
 	}
 	for _, impl := range addImplementations {
-		env := mock.NewMockEnvironment(impl.address, api.EnvConfig{Trusted: true}, false, 0)
+		env := mock.NewMockEnvironment(impl.address, api.EnvConfig{Trusted: true}, true, 1e3)
 		t.Run(impl.name, func(t *testing.T) {
 			input, err := ABI.Pack("add", x, y)
 			r.NoError(err)
@@ -145,21 +146,28 @@ func TestKkvPrecompileFixture(t *testing.T) {
 		precompiles.AddPrecompile(impl.address, impl.pc)
 	}
 	for _, impl := range kkvImplementations {
-		env := mock.NewMockEnvironment(impl.address, api.EnvConfig{Trusted: true}, false, 0)
+		env := mock.NewMockEnvironment(impl.address, api.EnvConfig{Trusted: true}, true, 1e5)
 		t.Run(impl.name, func(t *testing.T) {
 			input, err := ABI.Pack("set", k1, k2, v)
 			r.NoError(err)
 			isStatic := impl.pc.IsStatic(input)
 			r.NoError(err)
 			r.False(isStatic)
-			_, err = impl.pc.Run(env, input)
+			gasLeft := env.Gas()
+			_, _, err = precompiles.RunPrecompile(impl.pc, env, input, false)
+			gasUsed := gasLeft - env.Gas()
+			r.Equal(uint64(22100), gasUsed) // Cold SSTORE
 			r.NoError(err)
+
 			input, err = ABI.Pack("get", k1, k2)
 			r.NoError(err)
 			isStatic = impl.pc.IsStatic(input)
 			r.NoError(err)
 			r.True(isStatic)
-			output, err := impl.pc.Run(env, input)
+			gasLeft = env.Gas()
+			output, _, err := precompiles.RunPrecompile(impl.pc, env, input, true)
+			gasUsed = gasLeft - env.Gas()
+			r.Equal(uint64(100), gasUsed) // Warm SLOAD
 			r.NoError(err)
 			values, err := ABI.Methods["get"].Outputs.Unpack(output)
 			r.NoError(err)
@@ -206,14 +214,16 @@ func TestE2EKkvPrecompile(t *testing.T) {
 		t.Run(impl.name, func(t *testing.T) {
 			var (
 				gspec = &core.Genesis{
-					Config: params.TestChainConfig,
+					Config:   params.TestChainConfig,
+					GasLimit: 30_000_000,
 					Alloc: core.GenesisAlloc{
-						senderAddress: {Balance: big.NewInt(1e15)},
+						senderAddress: {Balance: math.MaxBig256},
 					},
 				}
 				signer = types.LatestSigner(gspec.Config)
 			)
-			db, blocks, _ := core.GenerateChainWithGenesis(gspec, ethash.NewFaker(), nBlocks, func(ii int, block *core.BlockGen) {
+
+			db, blocks, receipts := core.GenerateChainWithGenesis(gspec, ethash.NewFaker(), nBlocks, func(ii int, block *core.BlockGen) {
 				k1 := common.BigToHash(big.NewInt(int64(ii)))
 				k2 := common.BigToHash(big.NewInt(int64(ii + 1)))
 				v := common.BigToHash(big.NewInt(int64(ii + 2)))
@@ -224,6 +234,13 @@ func TestE2EKkvPrecompile(t *testing.T) {
 				r.NoError(err)
 				block.AddTx(signed)
 			})
+
+			for _, blockReceipts := range receipts {
+				for _, receipt := range blockReceipts {
+					r.Equal(types.ReceiptStatusSuccessful, receipt.Status)
+				}
+			}
+
 			root := blocks[len(blocks)-1].Root()
 			statedb, err := state.New(root, state.NewDatabase(db), nil)
 			r.NoError(err)
