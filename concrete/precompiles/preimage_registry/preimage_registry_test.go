@@ -45,41 +45,41 @@ func TestPreimageRegistry(t *testing.T) {
 
 	addPreimage := func(preimage []byte) common.Hash {
 		input, err := ABI.Pack("addPreimage", preimage)
-		r.Nil(err)
+		r.NoError(err)
 		output, err := pc.Run(env, input)
-		r.Nil(err)
+		r.NoError(err)
 		outputs, err := ABI.Methods["addPreimage"].Outputs.Unpack(output)
-		r.Nil(err)
+		r.NoError(err)
 		return common.Hash(outputs[0].([32]byte))
 	}
 
 	hasPreimage := func(hash common.Hash) bool {
 		input, err := ABI.Pack("hasPreimage", hash)
-		r.Nil(err)
+		r.NoError(err)
 		output, err := pc.Run(env, input)
-		r.Nil(err)
+		r.NoError(err)
 		outputs, err := ABI.Methods["hasPreimage"].Outputs.Unpack(output)
-		r.Nil(err)
+		r.NoError(err)
 		return outputs[0].(bool)
 	}
 
 	getPreimageSize := func(hash common.Hash) uint64 {
 		input, err := ABI.Pack("getPreimageSize", hash)
-		r.Nil(err)
+		r.NoError(err)
 		output, err := pc.Run(env, input)
-		r.Nil(err)
+		r.NoError(err)
 		outputs, err := ABI.Methods["getPreimageSize"].Outputs.Unpack(output)
-		r.Nil(err)
+		r.NoError(err)
 		return (outputs[0].(*big.Int)).Uint64()
 	}
 
 	getPreimage := func(hash common.Hash) []byte {
 		input, err := ABI.Pack("getPreimage", hash)
-		r.Nil(err)
+		r.NoError(err)
 		output, err := pc.Run(env, input)
-		r.Nil(err)
+		r.NoError(err)
 		outputs, err := ABI.Methods["getPreimage"].Outputs.Unpack(output)
-		r.Nil(err)
+		r.NoError(err)
 		return outputs[0].([]byte)
 	}
 
