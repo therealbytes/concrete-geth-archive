@@ -25,7 +25,7 @@ import (
 
 type pcSet struct {
 	blockNumber uint64
-	precompiles map[common.Address]Precompile
+	precompiles PrecompileMap
 }
 
 type pcSingle struct {
@@ -62,33 +62,33 @@ var (
 	pcSets = []pcSet{
 		{
 			blockNumber: 0,
-			precompiles: map[common.Address]Precompile{
+			precompiles: PrecompileMap{
 				addrIncl1: &pcBlank{},
 				addrIncl2: &pcBlank{},
 			},
 		},
 		{
 			blockNumber: 20,
-			precompiles: map[common.Address]Precompile{
+			precompiles: PrecompileMap{
 				addrIncl2: &pcBlank{},
 			},
 		},
 		{
 			blockNumber: 10,
-			precompiles: map[common.Address]Precompile{
+			precompiles: PrecompileMap{
 				addrIncl1: &pcBlank{},
 			},
 		},
 		{
 			blockNumber: 40,
-			precompiles: map[common.Address]Precompile{
+			precompiles: PrecompileMap{
 				addrIncl1: &pcBlank{},
 				addrIncl2: &pcBlank{},
 			},
 		},
 		{
 			blockNumber: 30,
-			precompiles: map[common.Address]Precompile{},
+			precompiles: PrecompileMap{},
 		},
 	}
 	pcSingles = []pcSingle{
