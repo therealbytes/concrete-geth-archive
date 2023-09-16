@@ -26,7 +26,6 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/concrete"
-	"github.com/ethereum/go-ethereum/concrete/api"
 	cc_api "github.com/ethereum/go-ethereum/concrete/api"
 	"github.com/ethereum/go-ethereum/core/rawdb"
 	"github.com/ethereum/go-ethereum/core/state/snapshot"
@@ -150,7 +149,7 @@ type StateDB struct {
 }
 
 // New creates a new state from a given trie.
-func New(root common.Hash, db Database, snaps *snapshot.Tree, concrete concrete.PrecompileMap) (*StateDB, error) {
+func New(root common.Hash, db Database, snaps *snapshot.Tree) (*StateDB, error) {
 	tr, err := db.OpenTrie(root)
 	if err != nil {
 		return nil, err
@@ -179,7 +178,7 @@ func New(root common.Hash, db Database, snaps *snapshot.Tree, concrete concrete.
 		persistentPreimagesPending: make(map[common.Hash]struct{}),
 		ephemeralStorage:           newEphemeralStorage(),
 		hasher:                     crypto.NewKeccakState(),
-		concretePrecompiles:        concrete,
+		concretePrecompiles:        nil,
 	}
 	if sdb.snaps != nil {
 		if sdb.snap = sdb.snaps.Snapshot(root); sdb.snap != nil {
@@ -187,6 +186,15 @@ func New(root common.Hash, db Database, snaps *snapshot.Tree, concrete concrete.
 			sdb.snapStorage = make(map[common.Hash]map[common.Hash][]byte)
 		}
 	}
+	return sdb, nil
+}
+
+func NewWithConcrete(root common.Hash, db Database, snaps *snapshot.Tree, concretePrecompiles concrete.PrecompileMap) (*StateDB, error) {
+	sdb, err := New(root, db, snaps)
+	if err != nil {
+		return nil, err
+	}
+	sdb.concretePrecompiles = concretePrecompiles
 	return sdb, nil
 }
 
@@ -1476,4 +1484,4 @@ func (s *StateDB) convertAccountSet(set map[common.Address]struct{}) map[common.
 	return ret
 }
 
-var _ api.StateDB = (*StateDB)(nil)
+var _ cc_api.StateDB = (*StateDB)(nil)

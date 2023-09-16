@@ -1727,7 +1727,8 @@ func (bc *BlockChain) insertChain(chain types.Blocks, setHead bool) (int, error)
 		if parent == nil {
 			parent = bc.GetHeader(block.ParentHash(), block.NumberU64()-1)
 		}
-		statedb, err := state.New(parent.Root, bc.stateCache, bc.snaps)
+		concretePcs := bc.concrete.Precompiles(block.NumberU64())
+		statedb, err := state.NewWithConcrete(parent.Root, bc.stateCache, bc.snaps, concretePcs)
 		if err != nil {
 			return it.index, err
 		}
@@ -1741,7 +1742,8 @@ func (bc *BlockChain) insertChain(chain types.Blocks, setHead bool) (int, error)
 		var followupInterrupt atomic.Bool
 		if !bc.cacheConfig.TrieCleanNoPrefetch {
 			if followup, err := it.peek(); followup != nil && err == nil {
-				throwaway, _ := state.New(parent.Root, bc.stateCache, bc.snaps)
+				concretePcs := bc.concrete.Precompiles(followup.NumberU64())
+				throwaway, _ := state.NewWithConcrete(parent.Root, bc.stateCache, bc.snaps, concretePcs)
 
 				go func(start time.Time, followup *types.Block, throwaway *state.StateDB) {
 					bc.prefetcher.Prefetch(followup, throwaway, bc.vmConfig, &followupInterrupt)
@@ -2500,4 +2502,8 @@ func (bc *BlockChain) SetTrieFlushInterval(interval time.Duration) {
 
 func (bs *BlockChain) SetConcrete(concrete concrete.PrecompileRegistry) {
 	bs.concrete = concrete
+}
+
+func (bs *BlockChain) GetConcrete() concrete.PrecompileRegistry {
+	return bs.concrete
 }

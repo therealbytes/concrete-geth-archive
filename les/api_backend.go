@@ -264,9 +264,9 @@ func (b *LesApiBackend) SubscribeRemovedLogsEvent(ch chan<- core.RemovedLogsEven
 	return b.eth.blockchain.SubscribeRemovedLogsEvent(ch)
 }
 
-func (b *LesApiBackend) SetConcrete(concrete concrete.PrecompileRegistry) {
-	panic("not supported")
-}
+func (b *LesApiBackend) SetConcrete(concrete concrete.PrecompileRegistry) {}
+
+func (b *LesApiBackend) GetConcrete() concrete.PrecompileRegistry { return nil }
 
 func (b *LesApiBackend) SyncProgress() ethereum.SyncProgress {
 	return b.eth.Downloader().Progress()
