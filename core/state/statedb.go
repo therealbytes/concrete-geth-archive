@@ -25,9 +25,9 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/concrete"
 	"github.com/ethereum/go-ethereum/concrete/api"
 	cc_api "github.com/ethereum/go-ethereum/concrete/api"
-	cc_precompiles "github.com/ethereum/go-ethereum/concrete/precompiles"
 	"github.com/ethereum/go-ethereum/core/rawdb"
 	"github.com/ethereum/go-ethereum/core/state/snapshot"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -145,6 +145,8 @@ type StateDB struct {
 	StorageUpdated int
 	AccountDeleted int
 	StorageDeleted int
+
+	ConcretePrecompiles map[common.Address]concrete.Precompile
 }
 
 // New creates a new state from a given trie.
@@ -405,8 +407,7 @@ func (s *StateDB) GetPersistentState(addr common.Address, key common.Hash) commo
 }
 
 func (s *StateDB) FinaliseConcretePrecompiles() {
-	for _, addr := range cc_precompiles.ActivePrecompiles() {
-		p, _ := cc_precompiles.GetPrecompile(addr)
+	for addr, p := range s.ConcretePrecompiles {
 		env := cc_api.NewNoCallEnvironment(
 			addr,
 			cc_api.EnvConfig{
@@ -426,8 +427,7 @@ func (s *StateDB) FinaliseConcretePrecompiles() {
 }
 
 func (s *StateDB) CommitConcretePrecompiles() {
-	for _, addr := range cc_precompiles.ActivePrecompiles() {
-		p, _ := cc_precompiles.GetPrecompile(addr)
+	for addr, p := range s.ConcretePrecompiles {
 		env := cc_api.NewNoCallEnvironment(
 			addr,
 			cc_api.EnvConfig{
@@ -1116,7 +1116,7 @@ func (s *StateDB) Finalise(deleteEmptyObjects bool) {
 			// Thus, we can safely ignore it here
 			continue
 		}
-		_, isConcretePrecompile := cc_precompiles.GetPrecompile(addr)
+		_, isConcretePrecompile := s.ConcretePrecompiles[addr]
 		if obj.suicided || (deleteEmptyObjects && obj.empty() && !isConcretePrecompile) {
 			obj.deleted = true
 
@@ -1398,7 +1398,7 @@ func (s *StateDB) Prepare(rules params.Rules, sender, coinbase common.Address, d
 		for _, addr := range precompiles {
 			al.AddAddress(addr)
 		}
-		for _, addr := range cc_precompiles.ActivePrecompiles() {
+		for addr := range s.ConcretePrecompiles {
 			al.AddAddress(addr)
 		}
 		for _, el := range list {
