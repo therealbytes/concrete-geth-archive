@@ -281,7 +281,7 @@ func (b *BlockGen) OffsetTime(seconds int64) {
 // values. Inserting them into BlockChain requires use of FakePow or
 // a similar non-validating proof of work implementation.
 func GenerateChain(config *params.ChainConfig, parent *types.Block, engine consensus.Engine, db ethdb.Database, n int, gen func(int, *BlockGen)) ([]*types.Block, []types.Receipts) {
-	return GenerateChainWithConcrete(config, parent, engine, db, n, nil, gen)
+	return GenerateChainWithConcrete(config, parent, engine, db, n, &concrete.GenericPrecompileRegistry{}, gen)
 }
 
 func GenerateChainWithConcrete(config *params.ChainConfig, parent *types.Block, engine consensus.Engine, db ethdb.Database, n int, concreteRegistry concrete.PrecompileRegistry, gen func(int, *BlockGen)) ([]*types.Block, []types.Receipts) {
@@ -368,7 +368,7 @@ func GenerateChainWithGenesisWithConcrete(genesis *Genesis, engine consensus.Eng
 }
 
 func GenerateChainWithGenesis(genesis *Genesis, engine consensus.Engine, n int, gen func(int, *BlockGen)) (ethdb.Database, []*types.Block, []types.Receipts) {
-	return GenerateChainWithGenesisWithConcrete(genesis, engine, n, nil, gen)
+	return GenerateChainWithGenesisWithConcrete(genesis, engine, n, &concrete.GenericPrecompileRegistry{}, gen)
 }
 
 func makeHeader(chain consensus.ChainReader, parent *types.Block, state *state.StateDB, engine consensus.Engine) *types.Header {

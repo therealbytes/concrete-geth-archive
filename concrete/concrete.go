@@ -61,9 +61,9 @@ var _ PrecompileRegistry = (*GenericPrecompileRegistry)(nil)
 
 func NewRegistry() *GenericPrecompileRegistry {
 	return &GenericPrecompileRegistry{
-		startingBlocks: []uint64{},
-		precompiles:    []PrecompileMap{},
-		addresses:      [][]common.Address{},
+		startingBlocks: make([]uint64, 0),
+		precompiles:    make([]PrecompileMap, 0),
+		addresses:      make([][]common.Address, 0),
 	}
 }
 
