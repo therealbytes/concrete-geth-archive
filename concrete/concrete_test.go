@@ -105,11 +105,11 @@ var (
 	}
 )
 
-func verifyPrecompileSet(t *testing.T, config *GenericPrecompileRegistry, num uint64, p pcSet) {
+func verifyPrecompileSet(t *testing.T, registry *GenericPrecompileRegistry, num uint64, p pcSet) {
 	r := require.New(t)
 	// Assert that all the provided addresses have been returned and all the returned
 	// addresses were provided
-	addresses := config.ActivePrecompiles(num)
+	addresses := registry.ActivePrecompiles(num)
 	r.Len(addresses, len(p.precompiles))
 	for _, address := range addresses {
 		_, ok := p.precompiles[address]
@@ -120,42 +120,49 @@ func verifyPrecompileSet(t *testing.T, config *GenericPrecompileRegistry, num ui
 	}
 	// Assert that all active addresses map to the correct precompile
 	for address, setPc := range p.precompiles {
-		configPc, ok := config.Precompile(address, num)
+		registryPc, ok := registry.Precompile(address, num)
 		r.True(ok)
-		r.Equal(setPc, configPc)
+		r.Equal(setPc, registryPc)
 	}
 	// Assert that inactive addresses do not map to a precompile
-	pc, ok := config.Precompile(addrExcl, num)
+	pc, ok := registry.Precompile(addrExcl, num)
 	r.Nil(pc)
 	r.False(ok)
+	// Assert that Precompiles returns the correct set of precompiles
+	pcs := registry.Precompiles(num)
+	r.Equal(p.precompiles, pcs)
 }
 
-func verifyPrecompileSingle(t *testing.T, config *GenericPrecompileRegistry, num uint64, p pcSingle) {
+func verifyPrecompileSingle(t *testing.T, registry *GenericPrecompileRegistry, num uint64, p pcSingle) {
 	r := require.New(t)
 	// Assert that all the provided addresses have been returned and all the returned
 	// addresses were provided
-	addresses := config.ActivePrecompiles(num)
+	addresses := registry.ActivePrecompiles(num)
 	r.Len(addresses, 1)
 	r.Equal(p.address, addresses[0])
 	// Assert that all active addresses map to the correct precompile
-	configPc, ok := config.Precompile(p.address, num)
+	registryPc, ok := registry.Precompile(p.address, num)
 	r.True(ok)
-	r.Equal(p.precompile, configPc)
+	r.Equal(p.precompile, registryPc)
 	// Assert that inactive addresses do not map to a precompile
-	pc, ok := config.Precompile(addrExcl, num)
+	pc, ok := registry.Precompile(addrExcl, num)
 	r.Nil(pc)
 	r.False(ok)
+	// Assert that Precompiles returns the correct set of precompiles
+	pcs := registry.Precompiles(num)
+	r.Len(pcs, 1)
+	r.Equal(p.precompile, pcs[p.address])
 }
 
-func TestConcreteConfig(t *testing.T) {
+func TestPrecompileRegistry(t *testing.T) {
 	t.Run("AddPrecompiles", func(t *testing.T) {
-		config := NewRegistry()
+		registry := NewRegistry()
 		for _, d := range pcSets {
-			config.AddPrecompiles(d.blockNumber, d.precompiles)
+			registry.AddPrecompiles(d.blockNumber, d.precompiles)
 		}
 		for _, d := range pcSets {
 			require.Panics(t, func() {
-				config.AddPrecompiles(d.blockNumber, d.precompiles)
+				registry.AddPrecompiles(d.blockNumber, d.precompiles)
 			})
 		}
 		for _, d := range pcSets {
@@ -163,19 +170,19 @@ func TestConcreteConfig(t *testing.T) {
 			// block in each range
 			for _, delta := range []uint64{0, 1, 9} {
 				blockNumber := d.blockNumber + delta
-				verifyPrecompileSet(t, config, blockNumber, d)
+				verifyPrecompileSet(t, registry, blockNumber, d)
 			}
 		}
 	})
 	t.Run("AddPrecompile", func(t *testing.T) {
 		t.Run("OnEmpty", func(t *testing.T) {
-			config := NewRegistry()
+			registry := NewRegistry()
 			for _, d := range pcSingles {
-				config.AddPrecompile(d.blockNumber, d.address, d.precompile)
+				registry.AddPrecompile(d.blockNumber, d.address, d.precompile)
 			}
 			for _, d := range pcSingles {
 				require.Panics(t, func() {
-					config.AddPrecompile(d.blockNumber, d.address, d.precompile)
+					registry.AddPrecompile(d.blockNumber, d.address, d.precompile)
 				})
 			}
 			for _, d := range pcSingles {
@@ -183,30 +190,30 @@ func TestConcreteConfig(t *testing.T) {
 				// block in each range
 				for _, delta := range []uint64{0, 1, 9} {
 					blockNumber := d.blockNumber + delta
-					verifyPrecompileSingle(t, config, blockNumber, d)
+					verifyPrecompileSingle(t, registry, blockNumber, d)
 				}
 			}
 		})
 		t.Run("OnExisting", func(t *testing.T) {
-			config := NewRegistry()
+			registry := NewRegistry()
 			for _, d := range pcSets {
-				config.AddPrecompiles(d.blockNumber, d.precompiles)
+				registry.AddPrecompiles(d.blockNumber, d.precompiles)
 			}
 			for _, d := range pcSingles {
-				config.AddPrecompile(d.blockNumber, d.address, d.precompile)
+				registry.AddPrecompile(d.blockNumber, d.address, d.precompile)
 			}
 			for _, d := range pcSingles {
 				require.Panics(t, func() {
-					config.AddPrecompile(d.blockNumber, d.address, d.precompile)
+					registry.AddPrecompile(d.blockNumber, d.address, d.precompile)
 				})
 			}
 			for _, d := range pcSets {
 				blockNumber := d.blockNumber
-				verifyPrecompileSet(t, config, blockNumber, d)
+				verifyPrecompileSet(t, registry, blockNumber, d)
 			}
 			for _, d := range pcSingles {
 				blockNumber := d.blockNumber
-				verifyPrecompileSingle(t, config, blockNumber, d)
+				verifyPrecompileSingle(t, registry, blockNumber, d)
 			}
 		})
 	})
