@@ -146,11 +146,11 @@ type StateDB struct {
 	AccountDeleted int
 	StorageDeleted int
 
-	ConcretePrecompiles map[common.Address]concrete.Precompile
+	concretePrecompiles map[common.Address]concrete.Precompile
 }
 
 // New creates a new state from a given trie.
-func New(root common.Hash, db Database, snaps *snapshot.Tree) (*StateDB, error) {
+func New(root common.Hash, db Database, snaps *snapshot.Tree, concrete concrete.PrecompileMap) (*StateDB, error) {
 	tr, err := db.OpenTrie(root)
 	if err != nil {
 		return nil, err
@@ -179,6 +179,7 @@ func New(root common.Hash, db Database, snaps *snapshot.Tree) (*StateDB, error) 
 		persistentPreimagesPending: make(map[common.Hash]struct{}),
 		ephemeralStorage:           newEphemeralStorage(),
 		hasher:                     crypto.NewKeccakState(),
+		concretePrecompiles:        concrete,
 	}
 	if sdb.snaps != nil {
 		if sdb.snap = sdb.snaps.Snapshot(root); sdb.snap != nil {
@@ -407,7 +408,7 @@ func (s *StateDB) GetPersistentState(addr common.Address, key common.Hash) commo
 }
 
 func (s *StateDB) FinaliseConcretePrecompiles() {
-	for addr, p := range s.ConcretePrecompiles {
+	for addr, p := range s.concretePrecompiles {
 		env := cc_api.NewNoCallEnvironment(
 			addr,
 			cc_api.EnvConfig{
@@ -427,7 +428,7 @@ func (s *StateDB) FinaliseConcretePrecompiles() {
 }
 
 func (s *StateDB) CommitConcretePrecompiles() {
-	for addr, p := range s.ConcretePrecompiles {
+	for addr, p := range s.concretePrecompiles {
 		env := cc_api.NewNoCallEnvironment(
 			addr,
 			cc_api.EnvConfig{
@@ -942,6 +943,7 @@ func (s *StateDB) Copy() *StateDB {
 		persistentPreimagesDirty:   make(map[common.Hash]struct{}, len(s.persistentPreimagesDirty)),
 		persistentPreimagesPending: make(map[common.Hash]struct{}, len(s.persistentPreimagesPending)),
 		hasher:                     crypto.NewKeccakState(),
+		concretePrecompiles:        s.concretePrecompiles,
 	}
 	// Copy the dirty states, logs, and preimages
 	for addr := range s.journal.dirties {
@@ -1116,7 +1118,7 @@ func (s *StateDB) Finalise(deleteEmptyObjects bool) {
 			// Thus, we can safely ignore it here
 			continue
 		}
-		_, isConcretePrecompile := s.ConcretePrecompiles[addr]
+		_, isConcretePrecompile := s.concretePrecompiles[addr]
 		if obj.suicided || (deleteEmptyObjects && obj.empty() && !isConcretePrecompile) {
 			obj.deleted = true
 
@@ -1398,7 +1400,7 @@ func (s *StateDB) Prepare(rules params.Rules, sender, coinbase common.Address, d
 		for _, addr := range precompiles {
 			al.AddAddress(addr)
 		}
-		for addr := range s.ConcretePrecompiles {
+		for addr := range s.concretePrecompiles {
 			al.AddAddress(addr)
 		}
 		for _, el := range list {

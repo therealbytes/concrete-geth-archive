@@ -61,7 +61,8 @@ func (evm *EVM) precompile(addr common.Address) (PrecompiledContract, bool) {
 }
 
 func (evm *EVM) concretePrecompile(addr common.Address) (concrete.Precompile, bool) {
-	return evm.Concrete.Precompile(addr, evm.Context.BlockNumber.Uint64())
+	pc, ok := evm.concretePrecompiles[addr]
+	return pc, ok
 }
 
 // BlockContext provides the EVM with auxiliary information. Once provided
@@ -130,19 +131,20 @@ type EVM struct {
 	// applied in opCall*.
 	callGasTemp uint64
 
-	Concrete concrete.PrecompileRegistry
+	concretePrecompiles map[common.Address]concrete.Precompile
 }
 
 // NewEVM returns a new EVM. The returned EVM is not thread safe and should
 // only ever be used *once*.
-func NewEVM(blockCtx BlockContext, txCtx TxContext, statedb StateDB, chainConfig *params.ChainConfig, config Config) *EVM {
+func NewEVM(blockCtx BlockContext, txCtx TxContext, statedb StateDB, chainConfig *params.ChainConfig, config Config, concrete concrete.PrecompileMap) *EVM {
 	evm := &EVM{
-		Context:     blockCtx,
-		TxContext:   txCtx,
-		StateDB:     statedb,
-		Config:      config,
-		chainConfig: chainConfig,
-		chainRules:  chainConfig.Rules(blockCtx.BlockNumber, blockCtx.Random != nil, blockCtx.Time),
+		Context:             blockCtx,
+		TxContext:           txCtx,
+		StateDB:             statedb,
+		Config:              config,
+		chainConfig:         chainConfig,
+		chainRules:          chainConfig.Rules(blockCtx.BlockNumber, blockCtx.Random != nil, blockCtx.Time),
+		concretePrecompiles: concrete,
 	}
 	evm.interpreter = NewEVMInterpreter(evm)
 	return evm
