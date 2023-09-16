@@ -23,7 +23,6 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/concrete"
 	"github.com/ethereum/go-ethereum/consensus"
 	"github.com/ethereum/go-ethereum/consensus/beacon"
 	"github.com/ethereum/go-ethereum/consensus/clique"
@@ -175,8 +174,6 @@ type Config struct {
 	RollupDisableTxPoolGossip    bool
 	RollupDisableTxPoolAdmission bool
 	RollupAllowPendingTxFilters  bool
-
-	Concrete concrete.PrecompileRegistry
 }
 
 // CreateConsensusEngine creates a consensus engine for the given chain config.
