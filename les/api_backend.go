@@ -264,7 +264,7 @@ func (b *LesApiBackend) SubscribeRemovedLogsEvent(ch chan<- core.RemovedLogsEven
 	return b.eth.blockchain.SubscribeRemovedLogsEvent(ch)
 }
 
-func (b *LesApiBackend) SetConcrete(concrete concrete.PrecompileRegistry) {}
+func (b *LesApiBackend) SetConcrete(concreteRegistry concrete.PrecompileRegistry) {}
 
 func (b *LesApiBackend) GetConcrete() concrete.PrecompileRegistry { return nil }
 

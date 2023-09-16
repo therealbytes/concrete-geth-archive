@@ -189,12 +189,12 @@ func New(root common.Hash, db Database, snaps *snapshot.Tree) (*StateDB, error) 
 	return sdb, nil
 }
 
-func NewWithConcrete(root common.Hash, db Database, snaps *snapshot.Tree, concretePrecompiles concrete.PrecompileMap) (*StateDB, error) {
+func NewWithConcrete(root common.Hash, db Database, snaps *snapshot.Tree, concretePcs concrete.PrecompileMap) (*StateDB, error) {
 	sdb, err := New(root, db, snaps)
 	if err != nil {
 		return nil, err
 	}
-	sdb.concretePrecompiles = concretePrecompiles
+	sdb.concretePrecompiles = concretePcs
 	return sdb, nil
 }
 

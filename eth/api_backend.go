@@ -294,8 +294,8 @@ func (b *EthAPIBackend) SubscribeLogsEvent(ch chan<- []*types.Log) event.Subscri
 	return b.eth.BlockChain().SubscribeLogsEvent(ch)
 }
 
-func (b *EthAPIBackend) SetConcrete(concrete concrete.PrecompileRegistry) {
-	b.eth.blockchain.SetConcrete(concrete)
+func (b *EthAPIBackend) SetConcrete(concreteRegistry concrete.PrecompileRegistry) {
+	b.eth.blockchain.SetConcrete(concreteRegistry)
 }
 
 func (b *EthAPIBackend) GetConcrete() concrete.PrecompileRegistry {

@@ -344,7 +344,7 @@ func geth(ctx *cli.Context) error {
 	return nil
 }
 
-func newConcreteGeth(concrete concrete.PrecompileRegistry) func(ctx *cli.Context) error {
+func newConcreteGeth(concreteRegistry concrete.PrecompileRegistry) func(ctx *cli.Context) error {
 	return func(ctx *cli.Context) error {
 		if args := ctx.Args().Slice(); len(args) > 0 {
 			return fmt.Errorf("invalid command: %q", args[0])
@@ -355,7 +355,7 @@ func newConcreteGeth(concrete concrete.PrecompileRegistry) func(ctx *cli.Context
 		defer stack.Close()
 
 		if ctx.String(utils.SyncModeFlag.Name) != "light" {
-			backend.SetConcrete(concrete)
+			backend.SetConcrete(concreteRegistry)
 		}
 
 		startNode(ctx, stack, backend, false)
@@ -364,9 +364,9 @@ func newConcreteGeth(concrete concrete.PrecompileRegistry) func(ctx *cli.Context
 	}
 }
 
-func newConcreteGethApp(concrete concrete.PrecompileRegistry) *cli.App {
+func newConcreteGethApp(concreteRegistry concrete.PrecompileRegistry) *cli.App {
 	ccApp := flags.NewApp("the concrete-geth command line interface")
-	ccApp.Action = newConcreteGeth(concrete)
+	ccApp.Action = newConcreteGeth(concreteRegistry)
 	ccApp.Copyright = "Copyright 2013-2023 The go-ethereum Authors & 2023 The concrete-geth Authors"
 	ccApp.Commands = app.Commands
 	ccApp.Flags = app.Flags
@@ -375,8 +375,8 @@ func newConcreteGethApp(concrete concrete.PrecompileRegistry) *cli.App {
 	return app
 }
 
-func NewConcreteGethApp(concrete concrete.PrecompileRegistry) *cli.App {
-	return newConcreteGethApp(concrete)
+func NewConcreteGethApp(concreteRegistry concrete.PrecompileRegistry) *cli.App {
+	return newConcreteGethApp(concreteRegistry)
 }
 
 // startNode boots up the system node and all registered protocols, after which

@@ -2500,8 +2500,8 @@ func (bc *BlockChain) SetTrieFlushInterval(interval time.Duration) {
 	bc.flushInterval.Store(int64(interval))
 }
 
-func (bs *BlockChain) SetConcrete(concrete concrete.PrecompileRegistry) {
-	bs.concrete = concrete
+func (bs *BlockChain) SetConcrete(concreteRegistry concrete.PrecompileRegistry) {
+	bs.concrete = concreteRegistry
 }
 
 func (bs *BlockChain) GetConcrete() concrete.PrecompileRegistry {
