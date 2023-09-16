@@ -28,7 +28,7 @@ func TestRunTestContract(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	passed, failed := RunTestContract(bytecode, ABI)
+	passed, failed := RunTestContract(nil, bytecode, ABI)
 	if failed > 0 {
 		t.Errorf("failed tests: %v", failed)
 	}

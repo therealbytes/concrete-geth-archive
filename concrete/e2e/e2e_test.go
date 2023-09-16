@@ -171,8 +171,8 @@ func TestKkvPrecompileFixture(t *testing.T) {
 	}
 
 	for _, impl := range kkvImplementations {
-		env := mock.NewMockEnvironment(impl.address, api.EnvConfig{Trusted: true}, true, 1e5)
 		t.Run(impl.name, func(t *testing.T) {
+			env := mock.NewMockEnvironment(impl.address, api.EnvConfig{Trusted: true}, true, 1e5)
 			pc := impl.newPc()
 			var (
 				err              error
@@ -226,7 +226,9 @@ func TestE2EKkvPrecompile(t *testing.T) {
 	)
 	for _, impl := range kkvImplementations {
 		t.Run(impl.name, func(t *testing.T) {
-			db, blocks, receipts := core.GenerateChainWithGenesis(gspec, ethash.NewFaker(), nBlocks, func(ii int, block *core.BlockGen) {
+			concreteRegistry := concrete.NewRegistry()
+			concreteRegistry.AddPrecompile(0, impl.address, impl.newPc())
+			db, blocks, receipts := core.GenerateChainWithGenesisWithConcrete(gspec, ethash.NewFaker(), nBlocks, concreteRegistry, func(ii int, block *core.BlockGen) {
 				k1 := common.BigToHash(big.NewInt(int64(ii)))
 				k2 := common.BigToHash(big.NewInt(int64(ii + 1)))
 				v := common.BigToHash(big.NewInt(int64(ii + 2)))
