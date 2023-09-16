@@ -43,15 +43,17 @@ func RunPrecompile(p Precompile, env *api.Env, input []byte, static bool) (ret [
 	return output, env.Gas(), err
 }
 
+type PrecompileMap map[common.Address]Precompile
+
 type PrecompileRegistry interface {
 	Precompile(address common.Address, blockNumber uint64) (Precompile, bool)
-	Precompiles(blockNumber uint64) map[common.Address]Precompile
+	Precompiles(blockNumber uint64) PrecompileMap
 	ActivePrecompiles(blockNumber uint64) []common.Address
 }
 
 type GenericPrecompileRegistry struct {
 	startingBlocks []uint64
-	precompiles    []map[common.Address]Precompile
+	precompiles    []PrecompileMap
 	addresses      [][]common.Address
 }
 
@@ -60,7 +62,7 @@ var _ PrecompileRegistry = (*GenericPrecompileRegistry)(nil)
 func NewRegistry() *GenericPrecompileRegistry {
 	return &GenericPrecompileRegistry{
 		startingBlocks: []uint64{},
-		precompiles:    []map[common.Address]Precompile{},
+		precompiles:    []PrecompileMap{},
 		addresses:      [][]common.Address{},
 	}
 }
@@ -80,7 +82,7 @@ func (c *GenericPrecompileRegistry) index(blockNumber uint64) int {
 	return -1
 }
 
-func (c *GenericPrecompileRegistry) AddPrecompiles(startingBlock uint64, precompiles map[common.Address]Precompile) {
+func (c *GenericPrecompileRegistry) AddPrecompiles(startingBlock uint64, precompiles PrecompileMap) {
 	idx := c.index(startingBlock)
 	if idx >= 0 && c.startingBlocks[idx] == startingBlock {
 		panic("precompiles already set for this block")
@@ -92,7 +94,7 @@ func (c *GenericPrecompileRegistry) AddPrecompiles(startingBlock uint64, precomp
 	}
 
 	c.startingBlocks = insert[uint64](c.startingBlocks, idx+1, startingBlock)
-	c.precompiles = insert[map[common.Address]Precompile](c.precompiles, idx+1, precompiles)
+	c.precompiles = insert[PrecompileMap](c.precompiles, idx+1, precompiles)
 	c.addresses = insert[[]common.Address](c.addresses, idx+1, addresses)
 }
 
@@ -109,7 +111,7 @@ func (c *GenericPrecompileRegistry) AddPrecompile(startingBlock uint64, address 
 	}
 
 	c.startingBlocks = insert[uint64](c.startingBlocks, idx+1, startingBlock)
-	c.precompiles = insert[map[common.Address]Precompile](c.precompiles, idx+1, map[common.Address]Precompile{address: precompile})
+	c.precompiles = insert[PrecompileMap](c.precompiles, idx+1, PrecompileMap{address: precompile})
 	c.addresses = insert[[]common.Address](c.addresses, idx+1, []common.Address{address})
 }
 
@@ -125,10 +127,10 @@ func (c *GenericPrecompileRegistry) Precompile(address common.Address, blockNumb
 	return pc, true
 }
 
-func (c *GenericPrecompileRegistry) Precompiles(blockNumber uint64) map[common.Address]Precompile {
+func (c *GenericPrecompileRegistry) Precompiles(blockNumber uint64) PrecompileMap {
 	idx := c.index(blockNumber)
 	if idx < 0 {
-		return map[common.Address]Precompile{}
+		return PrecompileMap{}
 	}
 	return c.precompiles[idx]
 }
