@@ -37,9 +37,9 @@ devtools:
 	@type "solc" 2> /dev/null || echo 'Please install solc'
 	@type "protoc" 2> /dev/null || echo 'Please install protoc'
 
-.PHONY: concrete concrete-wasm concrete-solidity concrete-cli
+.PHONY: concrete concrete-wasm concrete-solidity concrete-datamod
 
-concrete: concrete-wasm concrete-solidity concrete-cli
+concrete: concrete-wasm concrete-solidity concrete-datamod
 
 E2E_DIR = ./concrete/e2e
 TINYGO_PCS_DIR = ./tinygo/precompiles
@@ -56,8 +56,11 @@ concrete-wasm:
 concrete-solidity:
 	cd ./concrete/testtool/testdata && forge build
 
+DATAMOD_CMD_DIR = ./concrete/cmd/concrete
 DATAMOD_DIR = ./concrete/codegen/datamod
 
-concrete-cli:
-	go run ./concrete/cmd/concrete datamod $(DATAMOD_DIR)/testdata/good-datamod.json \
+concrete-datamod:
+	go run $(DATAMOD_CMD_DIR) datamod $(DATAMOD_DIR)/testdata/good-datamod.json \
 		--pkg testdata --out $(DATAMOD_DIR)/testdata --table-type-experimental
+	go run $(DATAMOD_CMD_DIR) datamod concrete/e2e/datamod.json \
+		--pkg datamod --out concrete/e2e/datamod
