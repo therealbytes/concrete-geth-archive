@@ -226,7 +226,6 @@ func (eth *Ethereum) stateAtTransaction(ctx context.Context, block *types.Block,
 		concretePcs := eth.blockchain.GetConcrete().Precompiles(block.NumberU64())
 		vmenv := vm.NewEVMWithConcrete(context, txContext, statedb, eth.blockchain.Config(), vm.Config{}, concretePcs)
 		statedb.SetTxContext(tx.Hash(), idx)
-		// Concrete to statedb and evm
 		if _, err := core.ApplyMessage(vmenv, msg, new(core.GasPool).AddGas(tx.Gas())); err != nil {
 			return nil, vm.BlockContext{}, nil, nil, fmt.Errorf("transaction %#x failed: %v", tx.Hash(), err)
 		}
