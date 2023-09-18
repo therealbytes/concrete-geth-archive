@@ -213,6 +213,10 @@ func TestKkvPrecompileFixture(t *testing.T) {
 
 			value := unpackGet(output)
 			r.Equal(v, value)
+
+			kkv := fixture_datamod.NewKkv(lib.NewDatastore(env))
+			value = kkv.Get(k1, k2).GetValue()
+			r.Equal(v, value)
 		})
 	}
 }
