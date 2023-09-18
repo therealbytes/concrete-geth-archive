@@ -41,18 +41,17 @@ devtools:
 
 concrete: concrete-wasm concrete-solidity
 
-FIXTURE_DIR = ./concrete/fixtures
+E2E_DIR = ./concrete/e2e
+TINYGO_PCS_DIR = ./tinygo/precompiles
 WASM_TESTDATA_DIR = ./concrete/wasm/testdata
 
 concrete-wasm:
-	mkdir -p $(FIXTURE_DIR)/build
-	mkdir -p $(FIXTURE_DIR)/add
-	mkdir -p $(FIXTURE_DIR)/kvv
+	mkdir -p $(E2E_DIR)/build
+	tinygo build -opt=2 -o $(E2E_DIR)/build/blank.wasm -target=wasi $(TINYGO_PCS_DIR)/blank/blank.go
+	tinygo build -opt=2 -o $(E2E_DIR)/build/add.wasm -target=wasi $(TINYGO_PCS_DIR)/add/add.go
+	tinygo build -opt=2 -o $(E2E_DIR)/build/kkv.wasm -target=wasi $(TINYGO_PCS_DIR)/kkv/kkv.go
 	mkdir -p $(WASM_TESTDATA_DIR)
-	tinygo build -opt=2 -o $(FIXTURE_DIR)/build/blank.wasm -target=wasi ./tinygo/precompiles/blank/blank.go
-	cp $(FIXTURE_DIR)/build/blank.wasm $(WASM_TESTDATA_DIR)/blank.wasm
-	tinygo build -opt=2 -o $(FIXTURE_DIR)/build/add.wasm -target=wasi ./tinygo/precompiles/add/add.go
-	tinygo build -opt=2 -o $(FIXTURE_DIR)/build/kkv.wasm -target=wasi ./tinygo/precompiles/kkv/kkv.go
+	cp $(E2E_DIR)/build/blank.wasm $(WASM_TESTDATA_DIR)/blank.wasm
 
 concrete-solidity:
 	cd ./concrete/testtool/testdata && forge build
