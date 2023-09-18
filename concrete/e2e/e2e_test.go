@@ -224,14 +224,24 @@ func TestE2EKkvPrecompile(t *testing.T) {
 		nBlocks    = 3
 		txGasLimit = uint64(1e5)
 	)
+
+	pcArgs := func(ii int) (k1, k2, v common.Hash) {
+		k1 = common.BigToHash(big.NewInt(int64(ii)))
+		k2 = common.BigToHash(big.NewInt(int64(ii + 1)))
+		v = common.BigToHash(big.NewInt(int64(ii + 2)))
+		return
+	}
+
 	for _, impl := range kkvImplementations {
 		t.Run(impl.name, func(t *testing.T) {
+			// Create registry with precompile implementation
 			concreteRegistry := concrete.NewRegistry()
 			concreteRegistry.AddPrecompile(0, impl.address, impl.newPc())
+
+			// Generate chain calling precompile every block
 			db, blocks, receipts := core.GenerateChainWithGenesisWithConcrete(gspec, ethash.NewFaker(), nBlocks, concreteRegistry, func(ii int, block *core.BlockGen) {
-				k1 := common.BigToHash(big.NewInt(int64(ii)))
-				k2 := common.BigToHash(big.NewInt(int64(ii + 1)))
-				v := common.BigToHash(big.NewInt(int64(ii + 2)))
+				// Create, sign and add tx calling precompile
+				k1, k2, v := pcArgs(ii)
 				input, err := ABI.Pack("set", k1, k2, v)
 				r.NoError(err)
 				tx := types.NewTransaction(block.TxNonce(senderAddress), impl.address, common.Big0, txGasLimit, block.BaseFee(), input)
@@ -240,21 +250,23 @@ func TestE2EKkvPrecompile(t *testing.T) {
 				block.AddTx(signed)
 			})
 
+			// Check receipt status
 			for _, blockReceipts := range receipts {
 				for _, receipt := range blockReceipts {
 					r.Equal(types.ReceiptStatusSuccessful, receipt.Status)
 				}
 			}
 
+			// Re-create kkv at last block
 			root := blocks[len(blocks)-1].Root()
 			statedb, err := state.New(root, state.NewDatabase(db), nil)
 			r.NoError(err)
 			env := api.NewNoCallEnvironment(impl.address, api.EnvConfig{}, statedb, false, 0)
 			kkv := fixture_datamod.NewKkv(lib.NewDatastore(env))
+
+			// Check state
 			for ii := 0; ii < nBlocks; ii++ {
-				k1 := common.BigToHash(big.NewInt(int64(ii)))
-				k2 := common.BigToHash(big.NewInt(int64(ii + 1)))
-				v := common.BigToHash(big.NewInt(int64(ii + 2)))
+				k1, k2, v := pcArgs(ii)
 				value := kkv.Get(k1, k2).GetValue()
 				r.Equal(v, value)
 			}
