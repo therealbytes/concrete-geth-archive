@@ -37,6 +37,8 @@ import (
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/params"
 	"github.com/stretchr/testify/require"
+	"github.com/tetratelabs/wazero"
+	"github.com/wasmerio/wasmer-go/wasmer"
 )
 
 //go:embed build/add.wasm
@@ -51,6 +53,14 @@ type pcImplementation struct {
 	newPc   func() concrete.Precompile
 }
 
+func wazeroPrecompile(code []byte) concrete.Precompile {
+	return wasm.NewWazeroPrecompileWithConfig(code, wazero.NewRuntimeConfigInterpreter())
+}
+
+func wasmerPrecompile(code []byte) concrete.Precompile {
+	return wasm.NewWasmerPrecompileWithConfig(code, wasmer.NewConfig().UseSinglepassCompiler())
+}
+
 var addImplementations = []pcImplementation{
 	{
 		name:    "Native",
@@ -60,12 +70,12 @@ var addImplementations = []pcImplementation{
 	{
 		name:    "Wazero",
 		address: common.BytesToAddress([]byte{131}),
-		newPc:   func() concrete.Precompile { return wasm.NewWazeroPrecompile(addWasm) },
+		newPc:   func() concrete.Precompile { return wazeroPrecompile(addWasm) },
 	},
 	{
 		name:    "Wasmer",
 		address: common.BytesToAddress([]byte{132}),
-		newPc:   func() concrete.Precompile { return wasm.NewWasmerPrecompile(addWasm) },
+		newPc:   func() concrete.Precompile { return wasmerPrecompile(addWasm) },
 	},
 }
 
@@ -125,12 +135,12 @@ var kkvImplementations = []pcImplementation{
 	{
 		name:    "Wazero",
 		address: common.BytesToAddress([]byte{141}),
-		newPc:   func() concrete.Precompile { return wasm.NewWazeroPrecompile(kkvWasm) },
+		newPc:   func() concrete.Precompile { return wazeroPrecompile(kkvWasm) },
 	},
 	{
 		name:    "Wasmer",
 		address: common.BytesToAddress([]byte{142}),
-		newPc:   func() concrete.Precompile { return wasm.NewWasmerPrecompile(kkvWasm) },
+		newPc:   func() concrete.Precompile { return wasmerPrecompile(kkvWasm) },
 	},
 }
 
