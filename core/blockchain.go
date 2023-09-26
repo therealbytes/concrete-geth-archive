@@ -1362,7 +1362,7 @@ func (bc *BlockChain) writeBlockWithState(block *types.Block, receipts []*types.
 	}
 	// Commit all cached state changes into underlying memory database.
 	root, err := state.CommitWithConcrete(
-		bc.GetConcrete().Precompiles(block.NumberU64()),
+		bc.Concrete().Precompiles(block.NumberU64()),
 		bc.chainConfig.IsEIP158(block.Number()),
 	)
 	if err != nil {
@@ -2509,7 +2509,7 @@ func (bs *BlockChain) SetConcrete(concreteRegistry concrete.PrecompileRegistry) 
 	}
 }
 
-func (bs *BlockChain) GetConcrete() concrete.PrecompileRegistry {
+func (bs *BlockChain) Concrete() concrete.PrecompileRegistry {
 	if bs.concrete == nil {
 		return &concrete.GenericPrecompileRegistry{}
 	}

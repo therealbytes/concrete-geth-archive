@@ -89,7 +89,7 @@ type Backend interface {
 	StateAtBlock(ctx context.Context, block *types.Block, reexec uint64, base *state.StateDB, readOnly bool, preferDisk bool) (*state.StateDB, StateReleaseFunc, error)
 	StateAtTransaction(ctx context.Context, block *types.Block, txIndex int, reexec uint64) (*core.Message, vm.BlockContext, *state.StateDB, StateReleaseFunc, error)
 	HistoricalRPCService() *rpc.Client
-	GetConcrete() concrete.PrecompileRegistry
+	Concrete() concrete.PrecompileRegistry
 }
 
 // API is the collection of tracing APIs exposed over the private debugging endpoint.
@@ -288,7 +288,7 @@ func (api *API) traceChain(start, end *types.Block, config *TraceConfig, closed 
 					}
 					// Only delete empty objects if EIP158/161 (a.k.a Spurious Dragon) is in effect
 					task.statedb.FinaliseWithConcrete(
-						api.backend.GetConcrete().Precompiles(task.block.NumberU64()),
+						api.backend.Concrete().Precompiles(task.block.NumberU64()),
 						api.backend.ChainConfig().IsEIP158(task.block.Number()),
 					)
 					task.results[i] = &txTraceResult{TxHash: tx.Hash(), Result: res}
@@ -568,7 +568,7 @@ func (api *API) IntermediateRoots(ctx context.Context, hash common.Hash, config 
 		var (
 			msg, _      = core.TransactionToMessage(tx, signer, block.BaseFee())
 			txContext   = core.NewEVMTxContext(msg)
-			concretePcs = api.backend.GetConcrete().Precompiles(block.NumberU64())
+			concretePcs = api.backend.Concrete().Precompiles(block.NumberU64())
 			vmenv       = vm.NewEVMWithConcrete(vmctx, txContext, statedb, chainConfig, vm.Config{}, concretePcs)
 		)
 		statedb.SetTxContext(tx.Hash(), i)
@@ -634,7 +634,7 @@ func (api *API) traceBlock(ctx context.Context, block *types.Block, config *Trac
 	var (
 		txs         = block.Transactions()
 		blockHash   = block.Hash()
-		concretePcs = api.backend.GetConcrete().Precompiles(block.NumberU64())
+		concretePcs = api.backend.Concrete().Precompiles(block.NumberU64())
 		is158       = api.backend.ChainConfig().IsEIP158(block.Number())
 		blockCtx    = core.NewEVMBlockContext(block.Header(), api.chainContext(ctx), nil, api.backend.ChainConfig(), statedb)
 		signer      = types.MakeSigner(api.backend.ChainConfig(), block.Number(), block.Time())
@@ -719,7 +719,7 @@ txloop:
 		// Generate the next state snapshot fast without tracing
 		msg, _ := core.TransactionToMessage(tx, signer, block.BaseFee())
 		statedb.SetTxContext(tx.Hash(), i)
-		concretePcs := api.backend.GetConcrete().Precompiles(block.NumberU64())
+		concretePcs := api.backend.Concrete().Precompiles(block.NumberU64())
 		vmenv := vm.NewEVMWithConcrete(blockCtx, core.NewEVMTxContext(msg), statedb, api.backend.ChainConfig(), vm.Config{}, concretePcs)
 		if _, err := core.ApplyMessage(vmenv, msg, new(core.GasPool).AddGas(msg.GasLimit)); err != nil {
 			failed = err
@@ -829,7 +829,7 @@ func (api *API) standardTraceBlockToFile(ctx context.Context, block *types.Block
 			}
 		}
 		// Execute the transaction and flush any traces to disk
-		concretePcs := api.backend.GetConcrete().Precompiles(block.NumberU64())
+		concretePcs := api.backend.Concrete().Precompiles(block.NumberU64())
 		vmenv := vm.NewEVMWithConcrete(vmctx, txContext, statedb, chainConfig, vmConf, concretePcs)
 		statedb.SetTxContext(tx.Hash(), i)
 		_, err = core.ApplyMessage(vmenv, msg, new(core.GasPool).AddGas(msg.GasLimit))
@@ -1003,7 +1003,7 @@ func (api *API) traceTx(ctx context.Context, message *core.Message, txctx *Conte
 			return nil, err
 		}
 	}
-	concretePcs := api.backend.GetConcrete().Precompiles(vmctx.BlockNumber.Uint64())
+	concretePcs := api.backend.Concrete().Precompiles(vmctx.BlockNumber.Uint64())
 	vmenv := vm.NewEVMWithConcrete(vmctx, txContext, statedb, api.backend.ChainConfig(), vm.Config{Tracer: tracer, NoBaseFee: true}, concretePcs)
 
 	// Define a meaningful timeout of a single transaction trace

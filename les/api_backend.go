@@ -266,7 +266,7 @@ func (b *LesApiBackend) SubscribeRemovedLogsEvent(ch chan<- core.RemovedLogsEven
 
 func (b *LesApiBackend) SetConcrete(concreteRegistry concrete.PrecompileRegistry) {}
 
-func (b *LesApiBackend) GetConcrete() concrete.PrecompileRegistry { return nil }
+func (b *LesApiBackend) Concrete() concrete.PrecompileRegistry { return nil }
 
 func (b *LesApiBackend) SyncProgress() ethereum.SyncProgress {
 	return b.eth.Downloader().Progress()

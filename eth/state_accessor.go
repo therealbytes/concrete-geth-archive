@@ -165,7 +165,7 @@ func (eth *Ethereum) StateAtBlock(ctx context.Context, block *types.Block, reexe
 		}
 		// Finalize the state so any modifications are written to the trie
 		root, err := statedb.CommitWithConcrete(
-			eth.blockchain.GetConcrete().Precompiles(current.NumberU64()),
+			eth.blockchain.Concrete().Precompiles(current.NumberU64()),
 			eth.blockchain.Config().IsEIP158(current.Number()),
 		)
 		if err != nil {
@@ -222,7 +222,7 @@ func (eth *Ethereum) stateAtTransaction(ctx context.Context, block *types.Block,
 			return msg, context, statedb, release, nil
 		}
 		// Not yet the searched for transaction, execute on top of the current state
-		concretePcs := eth.blockchain.GetConcrete().Precompiles(block.NumberU64())
+		concretePcs := eth.blockchain.Concrete().Precompiles(block.NumberU64())
 		vmenv := vm.NewEVMWithConcrete(context, txContext, statedb, eth.blockchain.Config(), vm.Config{}, concretePcs)
 		statedb.SetTxContext(tx.Hash(), idx)
 		if _, err := core.ApplyMessage(vmenv, msg, new(core.GasPool).AddGas(tx.Gas())); err != nil {

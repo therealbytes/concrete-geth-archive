@@ -73,7 +73,7 @@ func (p *StateProcessor) Process(block *types.Block, statedb *state.StateDB, cfg
 	}
 	var (
 		context     = NewEVMBlockContext(header, p.bc, nil, p.config, statedb)
-		concretePcs = p.bc.GetConcrete().Precompiles(header.Number.Uint64())
+		concretePcs = p.bc.Concrete().Precompiles(header.Number.Uint64())
 		vmenv       = vm.NewEVMWithConcrete(context, vm.TxContext{}, statedb, p.config, cfg, concretePcs)
 		signer      = types.MakeSigner(p.config, header.Number, header.Time)
 	)
