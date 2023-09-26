@@ -330,8 +330,7 @@ func (bc *BlockChain) State() (*state.StateDB, error) {
 
 // StateAt returns a new mutable state based on a particular point in time.
 func (bc *BlockChain) StateAt(root common.Hash) (*state.StateDB, error) {
-	concretePcs := bc.GetConcrete().Precompiles(bc.CurrentBlock().Number.Uint64())
-	return state.NewWithConcrete(root, bc.stateCache, bc.snaps, concretePcs)
+	return state.New(root, bc.stateCache, bc.snaps)
 }
 
 // Config retrieves the chain's fork configuration.

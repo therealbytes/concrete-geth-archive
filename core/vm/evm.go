@@ -149,9 +149,9 @@ func NewEVM(blockCtx BlockContext, txCtx TxContext, statedb StateDB, chainConfig
 	return evm
 }
 
-func NewEVMWithConcrete(blockCtx BlockContext, txCtx TxContext, statedb StateDB, chainConfig *params.ChainConfig, config Config, concretePcs concrete.PrecompileMap) *EVM {
+func NewEVMWithConcrete(blockCtx BlockContext, txCtx TxContext, statedb StateDB, chainConfig *params.ChainConfig, config Config, concretePrecompiles concrete.PrecompileMap) *EVM {
 	evm := NewEVM(blockCtx, txCtx, statedb, chainConfig, config)
-	evm.concretePrecompiles = concretePcs
+	evm.concretePrecompiles = concretePrecompiles
 	return evm
 }
 
@@ -604,6 +604,8 @@ func (evm *EVM) Create2(caller ContractRef, code []byte, gas uint64, endowment *
 
 // ChainConfig returns the environment's chain configuration
 func (evm *EVM) ChainConfig() *params.ChainConfig { return evm.chainConfig }
+
+func (evm *EVM) ConcretePrecompiles() concrete.PrecompileMap { return evm.concretePrecompiles }
 
 type concreteBlockContext struct {
 	ctx *BlockContext

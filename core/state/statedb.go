@@ -144,8 +144,6 @@ type StateDB struct {
 	StorageUpdated int
 	AccountDeleted int
 	StorageDeleted int
-
-	concretePrecompiles map[common.Address]concrete.Precompile
 }
 
 // New creates a new state from a given trie.
@@ -178,7 +176,6 @@ func New(root common.Hash, db Database, snaps *snapshot.Tree) (*StateDB, error) 
 		persistentPreimagesPending: make(map[common.Hash]struct{}),
 		ephemeralStorage:           newEphemeralStorage(),
 		hasher:                     crypto.NewKeccakState(),
-		concretePrecompiles:        nil,
 	}
 	if sdb.snaps != nil {
 		if sdb.snap = sdb.snaps.Snapshot(root); sdb.snap != nil {
@@ -186,15 +183,6 @@ func New(root common.Hash, db Database, snaps *snapshot.Tree) (*StateDB, error) 
 			sdb.snapStorage = make(map[common.Hash]map[common.Hash][]byte)
 		}
 	}
-	return sdb, nil
-}
-
-func NewWithConcrete(root common.Hash, db Database, snaps *snapshot.Tree, concretePcs concrete.PrecompileMap) (*StateDB, error) {
-	sdb, err := New(root, db, snaps)
-	if err != nil {
-		return nil, err
-	}
-	sdb.concretePrecompiles = concretePcs
 	return sdb, nil
 }
 
@@ -415,8 +403,8 @@ func (s *StateDB) GetPersistentState(addr common.Address, key common.Hash) commo
 	return s.GetState(addr, key)
 }
 
-func (s *StateDB) FinaliseConcretePrecompiles() {
-	for addr, p := range s.concretePrecompiles {
+func (s *StateDB) FinaliseConcretePrecompiles(concretePrecompiles concrete.PrecompileMap) {
+	for addr, p := range concretePrecompiles {
 		env := cc_api.NewNoCallEnvironment(
 			addr,
 			cc_api.EnvConfig{
@@ -439,8 +427,8 @@ func (s *StateDB) FinaliseConcretePrecompiles() {
 	}
 }
 
-func (s *StateDB) CommitConcretePrecompiles() {
-	for addr, p := range s.concretePrecompiles {
+func (s *StateDB) CommitConcretePrecompiles(concretePrecompiles concrete.PrecompileMap) {
+	for addr, p := range concretePrecompiles {
 		env := cc_api.NewNoCallEnvironment(
 			addr,
 			cc_api.EnvConfig{
@@ -959,7 +947,6 @@ func (s *StateDB) Copy() *StateDB {
 		persistentPreimagesDirty:   make(map[common.Hash]struct{}, len(s.persistentPreimagesDirty)),
 		persistentPreimagesPending: make(map[common.Hash]struct{}, len(s.persistentPreimagesPending)),
 		hasher:                     crypto.NewKeccakState(),
-		concretePrecompiles:        s.concretePrecompiles,
 	}
 	// Copy the dirty states, logs, and preimages
 	for addr := range s.journal.dirties {
@@ -1106,7 +1093,11 @@ func (s *StateDB) GetRefund() uint64 {
 // the journal as well as the refunds. Finalise, however, will not push any updates
 // into the tries just yet. Only IntermediateRoot or Commit will do that.
 func (s *StateDB) Finalise(deleteEmptyObjects bool) {
-	s.FinaliseConcretePrecompiles()
+	s.FinaliseWithConcrete(nil, deleteEmptyObjects)
+}
+
+func (s *StateDB) FinaliseWithConcrete(concretePrecompiles concrete.PrecompileMap, deleteEmptyObjects bool) {
+	s.FinaliseConcretePrecompiles(concretePrecompiles)
 
 	for hash := range s.ephemeralPreimagesDirty {
 		s.ephemeralPreimagesAdded[hash] = struct{}{}
@@ -1134,7 +1125,7 @@ func (s *StateDB) Finalise(deleteEmptyObjects bool) {
 			// Thus, we can safely ignore it here
 			continue
 		}
-		_, isConcretePrecompile := s.concretePrecompiles[addr]
+		_, isConcretePrecompile := concretePrecompiles[addr]
 		if obj.suicided || (deleteEmptyObjects && obj.empty() && !isConcretePrecompile) {
 			obj.deleted = true
 
@@ -1172,8 +1163,12 @@ func (s *StateDB) Finalise(deleteEmptyObjects bool) {
 // It is called in between transactions to get the root hash that
 // goes into transaction receipts.
 func (s *StateDB) IntermediateRoot(deleteEmptyObjects bool) common.Hash {
+	return s.IntermediateRootWithConcrete(nil, deleteEmptyObjects)
+}
+
+func (s *StateDB) IntermediateRootWithConcrete(concretePrecompiles concrete.PrecompileMap, deleteEmptyObjects bool) common.Hash {
 	// Finalise all the dirty storage states and write them into the tries
-	s.Finalise(deleteEmptyObjects)
+	s.FinaliseWithConcrete(concretePrecompiles, deleteEmptyObjects)
 
 	// If there was a trie prefetcher operating, it gets aborted and irrevocably
 	// modified after we start retrieving tries. Remove it from the statedb after
@@ -1249,14 +1244,18 @@ func (s *StateDB) clearJournalAndRefund() {
 
 // Commit writes the state to the underlying in-memory trie database.
 func (s *StateDB) Commit(deleteEmptyObjects bool) (common.Hash, error) {
-	s.CommitConcretePrecompiles()
+	return s.CommitWithConcrete(nil, deleteEmptyObjects)
+}
+
+func (s *StateDB) CommitWithConcrete(concretePrecompiles concrete.PrecompileMap, deleteEmptyObjects bool) (common.Hash, error) {
+	s.CommitConcretePrecompiles(concretePrecompiles)
 
 	if s.dbErr != nil {
 		return common.Hash{}, fmt.Errorf("commit aborted due to earlier error: %v", s.dbErr)
 	}
 
 	// Finalize any pending changes and merge everything into the tries
-	s.IntermediateRoot(deleteEmptyObjects)
+	s.IntermediateRootWithConcrete(concretePrecompiles, deleteEmptyObjects)
 
 	// Commit objects to the trie, measuring the elapsed time
 	var (
@@ -1402,7 +1401,7 @@ func (s *StateDB) Commit(deleteEmptyObjects bool) (common.Hash, error) {
 // - Reset access list (Berlin)
 // - Add coinbase to access list (EIP-3651)
 // - Reset transient storage (EIP-1153)
-func (s *StateDB) Prepare(rules params.Rules, sender, coinbase common.Address, dst *common.Address, precompiles []common.Address, list types.AccessList) {
+func (s *StateDB) Prepare(rules params.Rules, sender, coinbase common.Address, dst *common.Address, precompiles []common.Address, concretePrecompiles concrete.PrecompileMap, list types.AccessList) {
 	if rules.IsBerlin {
 		// Clear out any leftover from previous executions
 		al := newAccessList()
@@ -1416,7 +1415,7 @@ func (s *StateDB) Prepare(rules params.Rules, sender, coinbase common.Address, d
 		for _, addr := range precompiles {
 			al.AddAddress(addr)
 		}
-		for addr := range s.concretePrecompiles {
+		for addr := range concretePrecompiles {
 			al.AddAddress(addr)
 		}
 		for _, el := range list {
