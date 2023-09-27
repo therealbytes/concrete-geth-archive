@@ -1069,13 +1069,12 @@ func (s *StateDB) CommitWithConcrete(concretePrecompiles concrete.PrecompileMap,
 
 	// Commit objects to the trie, measuring the elapsed time
 	var (
-		accountTrieNodesUpdated  int
-		accountTrieNodesDeleted  int
-		storageTrieNodesUpdated  int
-		storageTrieNodesDeleted  int
-		nodes                    = trienode.NewMergedNodeSet()
-		codeWriter               = s.db.DiskDB().NewBatch()
-		persistentPreimageWriter = s.db.DiskDB().NewBatch()
+		accountTrieNodesUpdated int
+		accountTrieNodesDeleted int
+		storageTrieNodesUpdated int
+		storageTrieNodesDeleted int
+		nodes                   = trienode.NewMergedNodeSet()
+		codeWriter              = s.db.DiskDB().NewBatch()
 	)
 	for addr := range s.stateObjectsDirty {
 		if obj := s.stateObjects[addr]; !obj.deleted {
@@ -1112,11 +1111,6 @@ func (s *StateDB) CommitWithConcrete(concretePrecompiles concrete.PrecompileMap,
 	if codeWriter.ValueSize() > 0 {
 		if err := codeWriter.Write(); err != nil {
 			log.Crit("Failed to commit dirty codes", "error", err)
-		}
-	}
-	if persistentPreimageWriter.ValueSize() > 0 {
-		if err := persistentPreimageWriter.Write(); err != nil {
-			log.Crit("Failed to commit persistent preimages", "error", err)
 		}
 	}
 	// Write the account trie changes, measuring the amount of wasted time
