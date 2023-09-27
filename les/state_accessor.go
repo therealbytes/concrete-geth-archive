@@ -21,7 +21,6 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/ethereum/go-ethereum/concrete"
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/state"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -69,7 +68,7 @@ func (leth *LightEthereum) stateAtTransaction(ctx context.Context, block *types.
 			return msg, context, statedb, release, nil
 		}
 		// Not yet the searched for transaction, execute on top of the current state
-		concretePcs := concrete.PrecompileMap{} // TODO
+		concretePcs := leth.blockchain.Concrete().Precompiles(block.NumberU64())
 		vmenv := vm.NewEVMWithConcrete(context, txContext, statedb, leth.blockchain.Config(), vm.Config{}, concretePcs)
 		if _, err := core.ApplyMessage(vmenv, msg, new(core.GasPool).AddGas(tx.Gas())); err != nil {
 			return nil, vm.BlockContext{}, nil, nil, fmt.Errorf("transaction %#x failed: %v", tx.Hash(), err)
