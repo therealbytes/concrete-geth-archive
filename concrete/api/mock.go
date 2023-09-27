@@ -69,12 +69,6 @@ func (m *mockStateDB) SetEphemeralState(addr common.Address, key common.Hash, va
 func (m *mockStateDB) GetEphemeralState(addr common.Address, key common.Hash) common.Hash {
 	return common.Hash{}
 }
-func (m *mockStateDB) AddPersistentPreimage(hash common.Hash, preimage []byte) {}
-func (m *mockStateDB) GetPersistentPreimage(hash common.Hash) []byte           { return []byte{} }
-func (m *mockStateDB) GetPersistentPreimageSize(hash common.Hash) int          { return 0 }
-func (m *mockStateDB) AddEphemeralPreimage(hash common.Hash, preimage []byte)  {}
-func (m *mockStateDB) GetEphemeralPreimage(hash common.Hash) []byte            { return []byte{} }
-func (m *mockStateDB) GetEphemeralPreimageSize(hash common.Hash) int           { return 0 }
 
 func (m *mockStateDB) AddRefund(uint64)  {}
 func (m *mockStateDB) SubRefund(uint64)  {}

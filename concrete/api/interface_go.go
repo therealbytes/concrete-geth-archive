@@ -55,10 +55,4 @@ type StateDB interface {
 	GetPersistentState(addr common.Address, key common.Hash) common.Hash
 	SetEphemeralState(addr common.Address, key common.Hash, value common.Hash)
 	GetEphemeralState(addr common.Address, key common.Hash) common.Hash
-	AddPersistentPreimage(hash common.Hash, preimage []byte)
-	GetPersistentPreimage(hash common.Hash) []byte
-	GetPersistentPreimageSize(hash common.Hash) int
-	AddEphemeralPreimage(hash common.Hash, preimage []byte)
-	GetEphemeralPreimage(hash common.Hash) []byte
-	GetEphemeralPreimageSize(hash common.Hash) int
 }

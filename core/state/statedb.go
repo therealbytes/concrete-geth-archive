@@ -107,17 +107,6 @@ type StateDB struct {
 	transientStorage transientStorage
 
 	// Concrete
-
-	ephemeralPreimages      map[common.Hash][]byte
-	ephemeralPreimagesDirty map[common.Hash]struct{}
-	ephemeralPreimagesAdded map[common.Hash]struct{}
-
-	persistentPreimages        map[common.Hash][]byte
-	persistentPreimagesSize    map[common.Hash]int
-	persistentPreimagesRead    map[common.Hash]struct{}
-	persistentPreimagesDirty   map[common.Hash]struct{}
-	persistentPreimagesPending map[common.Hash]struct{}
-
 	ephemeralStorage ephemeralStorage
 
 	// Journal of state modifications. This is the backbone of
@@ -153,29 +142,21 @@ func New(root common.Hash, db Database, snaps *snapshot.Tree) (*StateDB, error) 
 		return nil, err
 	}
 	sdb := &StateDB{
-		db:                         db,
-		trie:                       tr,
-		originalRoot:               root,
-		snaps:                      snaps,
-		stateObjects:               make(map[common.Address]*stateObject),
-		stateObjectsPending:        make(map[common.Address]struct{}),
-		stateObjectsDirty:          make(map[common.Address]struct{}),
-		stateObjectsDestruct:       make(map[common.Address]struct{}),
-		logs:                       make(map[common.Hash][]*types.Log),
-		preimages:                  make(map[common.Hash][]byte),
-		journal:                    newJournal(),
-		accessList:                 newAccessList(),
-		transientStorage:           newTransientStorage(),
-		ephemeralPreimages:         make(map[common.Hash][]byte),
-		ephemeralPreimagesDirty:    make(map[common.Hash]struct{}),
-		ephemeralPreimagesAdded:    make(map[common.Hash]struct{}),
-		persistentPreimages:        make(map[common.Hash][]byte),
-		persistentPreimagesSize:    make(map[common.Hash]int),
-		persistentPreimagesRead:    make(map[common.Hash]struct{}),
-		persistentPreimagesDirty:   make(map[common.Hash]struct{}),
-		persistentPreimagesPending: make(map[common.Hash]struct{}),
-		ephemeralStorage:           newEphemeralStorage(),
-		hasher:                     crypto.NewKeccakState(),
+		db:                   db,
+		trie:                 tr,
+		originalRoot:         root,
+		snaps:                snaps,
+		stateObjects:         make(map[common.Address]*stateObject),
+		stateObjectsPending:  make(map[common.Address]struct{}),
+		stateObjectsDirty:    make(map[common.Address]struct{}),
+		stateObjectsDestruct: make(map[common.Address]struct{}),
+		logs:                 make(map[common.Hash][]*types.Log),
+		preimages:            make(map[common.Hash][]byte),
+		journal:              newJournal(),
+		accessList:           newAccessList(),
+		transientStorage:     newTransientStorage(),
+		ephemeralStorage:     newEphemeralStorage(),
+		hasher:               crypto.NewKeccakState(),
 	}
 	if sdb.snaps != nil {
 		if sdb.snap = sdb.snaps.Snapshot(root); sdb.snap != nil {
@@ -247,129 +228,6 @@ func (s *StateDB) Logs() []*types.Log {
 		logs = append(logs, lgs...)
 	}
 	return logs
-}
-
-func (s *StateDB) hasEphemeralPreimage(hash common.Hash) bool {
-	// A preimage not marked as dirty or added is considered non-existent,
-	// even if it is present in the map.
-	if _, ok := s.ephemeralPreimagesDirty[hash]; ok {
-		return true
-	}
-	if _, ok := s.ephemeralPreimagesAdded[hash]; ok {
-		return true
-	}
-	return false
-}
-
-func (s *StateDB) addEphemeralPreimage(hash common.Hash, preimage []byte) {
-	pi := make([]byte, len(preimage))
-	copy(pi, preimage)
-	s.ephemeralPreimages[hash] = pi
-	s.ephemeralPreimagesDirty[hash] = struct{}{}
-}
-
-func (s *StateDB) getEphemeralPreimage(hash common.Hash) []byte {
-	preimage := s.ephemeralPreimages[hash]
-	pi := make([]byte, len(preimage))
-	copy(pi, preimage)
-	return pi
-}
-
-func (s *StateDB) AddEphemeralPreimage(hash common.Hash, preimage []byte) {
-	if s.hasEphemeralPreimage(hash) {
-		return
-	}
-	s.journal.append(ephemeralPreimageChange{hash: hash})
-	s.addEphemeralPreimage(hash, preimage)
-}
-
-func (s *StateDB) GetEphemeralPreimage(hash common.Hash) []byte {
-	if !s.hasEphemeralPreimage(hash) {
-		return []byte{}
-	}
-	return s.getEphemeralPreimage(hash)
-}
-
-func (s *StateDB) GetEphemeralPreimageSize(hash common.Hash) int {
-	if !s.hasEphemeralPreimage(hash) {
-		return 0
-	}
-	return len(s.getEphemeralPreimage(hash))
-}
-
-func (s *StateDB) persistentPreimageCached(hash common.Hash) bool {
-	if _, ok := s.persistentPreimagesRead[hash]; ok {
-		return true
-	}
-	if _, ok := s.persistentPreimagesDirty[hash]; ok {
-		return true
-	}
-	if _, ok := s.persistentPreimagesPending[hash]; ok {
-		return true
-	}
-	return false
-}
-
-func (s *StateDB) AddPersistentPreimage(hash common.Hash, preimage []byte) {
-	if s.persistentPreimageCached(hash) {
-		return
-	}
-	if _, ok := s.persistentPreimagesSize[hash]; ok {
-		// The size was read from the DB, but the preimage was not.
-		// The preimage is already committed, so it can be added as if it was read.
-		delete(s.persistentPreimagesSize, hash)
-		s.persistentPreimagesRead[hash] = struct{}{}
-	} else {
-		s.journal.append(persistentPreimageChange{hash: hash})
-		s.persistentPreimagesDirty[hash] = struct{}{}
-	}
-	pi := make([]byte, len(preimage))
-	copy(pi, preimage)
-	s.persistentPreimages[hash] = pi
-}
-
-func (s *StateDB) GetPersistentPreimage(hash common.Hash) []byte {
-	var preimage []byte
-	if s.persistentPreimageCached(hash) {
-		preimage = s.persistentPreimages[hash]
-	} else {
-		preimage, err := s.db.ConcretePreimage(hash)
-		if err != nil {
-			s.setError(fmt.Errorf("can't load persistent preimage %x: %v", hash, err))
-			return []byte{}
-		}
-		s.persistentPreimagesRead[hash] = struct{}{}
-		s.persistentPreimages[hash] = preimage
-	}
-	pi := make([]byte, len(preimage))
-	copy(pi, preimage)
-	return pi
-}
-
-func (s *StateDB) GetPersistentPreimageSize(hash common.Hash) int {
-	if size, ok := s.persistentPreimagesSize[hash]; ok {
-		return size
-	}
-	if s.persistentPreimageCached(hash) {
-		preimage := s.persistentPreimages[hash]
-		return len(preimage)
-	}
-	size, err := s.db.ConcretePreimageSize(hash)
-	if err != nil {
-		s.setError(fmt.Errorf("can't load persistent preimage size %x: %v", hash, err))
-		return 0
-	}
-	if _, ok := s.persistentPreimages[hash]; !ok {
-		// All preimages marked as cached are in the map but not all preimages
-		// in the map are marked as cached as the transaction that added a
-		// dirty preimage may have been reverted.
-		// The preimage is in the DB, otherwise it would not be possible to get the
-		// size without it being cached, so it can be added as if it was read.
-		s.persistentPreimagesRead[hash] = struct{}{}
-		return size
-	}
-	s.persistentPreimagesSize[hash] = size
-	return size
 }
 
 func (s *StateDB) SetEphemeralState(addr common.Address, key, value common.Hash) {
@@ -926,27 +784,19 @@ func (db *StateDB) ForEachStorage(addr common.Address, cb func(key, value common
 func (s *StateDB) Copy() *StateDB {
 	// Copy all the basic fields, initialize the memory ones
 	state := &StateDB{
-		db:                         s.db,
-		trie:                       s.db.CopyTrie(s.trie),
-		originalRoot:               s.originalRoot,
-		stateObjects:               make(map[common.Address]*stateObject, len(s.journal.dirties)),
-		stateObjectsPending:        make(map[common.Address]struct{}, len(s.stateObjectsPending)),
-		stateObjectsDirty:          make(map[common.Address]struct{}, len(s.journal.dirties)),
-		stateObjectsDestruct:       make(map[common.Address]struct{}, len(s.stateObjectsDestruct)),
-		refund:                     s.refund,
-		logs:                       make(map[common.Hash][]*types.Log, len(s.logs)),
-		logSize:                    s.logSize,
-		preimages:                  make(map[common.Hash][]byte, len(s.preimages)),
-		journal:                    newJournal(),
-		ephemeralPreimages:         make(map[common.Hash][]byte, len(s.ephemeralPreimages)),
-		ephemeralPreimagesDirty:    make(map[common.Hash]struct{}, len(s.ephemeralPreimagesDirty)),
-		ephemeralPreimagesAdded:    make(map[common.Hash]struct{}, len(s.ephemeralPreimagesAdded)),
-		persistentPreimages:        make(map[common.Hash][]byte, len(s.persistentPreimages)),
-		persistentPreimagesSize:    make(map[common.Hash]int, len(s.persistentPreimagesSize)),
-		persistentPreimagesRead:    make(map[common.Hash]struct{}, len(s.persistentPreimagesRead)),
-		persistentPreimagesDirty:   make(map[common.Hash]struct{}, len(s.persistentPreimagesDirty)),
-		persistentPreimagesPending: make(map[common.Hash]struct{}, len(s.persistentPreimagesPending)),
-		hasher:                     crypto.NewKeccakState(),
+		db:                   s.db,
+		trie:                 s.db.CopyTrie(s.trie),
+		originalRoot:         s.originalRoot,
+		stateObjects:         make(map[common.Address]*stateObject, len(s.journal.dirties)),
+		stateObjectsPending:  make(map[common.Address]struct{}, len(s.stateObjectsPending)),
+		stateObjectsDirty:    make(map[common.Address]struct{}, len(s.journal.dirties)),
+		stateObjectsDestruct: make(map[common.Address]struct{}, len(s.stateObjectsDestruct)),
+		refund:               s.refund,
+		logs:                 make(map[common.Hash][]*types.Log, len(s.logs)),
+		logSize:              s.logSize,
+		preimages:            make(map[common.Hash][]byte, len(s.preimages)),
+		journal:              newJournal(),
+		hasher:               crypto.NewKeccakState(),
 	}
 	// Copy the dirty states, logs, and preimages
 	for addr := range s.journal.dirties {
@@ -994,30 +844,6 @@ func (s *StateDB) Copy() *StateDB {
 	}
 	for hash, preimage := range s.preimages {
 		state.preimages[hash] = preimage
-	}
-	for hash, preimage := range s.ephemeralPreimages {
-		state.ephemeralPreimages[hash] = preimage
-	}
-	for hash := range s.ephemeralPreimagesDirty {
-		state.ephemeralPreimagesDirty[hash] = struct{}{}
-	}
-	for hash := range s.ephemeralPreimagesAdded {
-		state.ephemeralPreimagesAdded[hash] = struct{}{}
-	}
-	for hash, preimage := range s.persistentPreimages {
-		state.persistentPreimages[hash] = preimage
-	}
-	for hash, size := range s.persistentPreimagesSize {
-		state.persistentPreimagesSize[hash] = size
-	}
-	for hash := range s.persistentPreimagesRead {
-		state.persistentPreimagesRead[hash] = struct{}{}
-	}
-	for hash := range s.persistentPreimagesDirty {
-		state.persistentPreimagesDirty[hash] = struct{}{}
-	}
-	for hash := range s.persistentPreimagesPending {
-		state.persistentPreimagesPending[hash] = struct{}{}
 	}
 	// Do we need to copy the access list and transient storage?
 	// In practice: No. At the start of a transaction, these two lists are empty.
@@ -1098,20 +924,6 @@ func (s *StateDB) Finalise(deleteEmptyObjects bool) {
 
 func (s *StateDB) FinaliseWithConcrete(concretePrecompiles concrete.PrecompileMap, deleteEmptyObjects bool) {
 	s.FinaliseConcretePrecompiles(concretePrecompiles)
-
-	for hash := range s.ephemeralPreimagesDirty {
-		s.ephemeralPreimagesAdded[hash] = struct{}{}
-	}
-	if len(s.ephemeralPreimagesDirty) > 0 {
-		s.ephemeralPreimagesDirty = make(map[common.Hash]struct{})
-	}
-
-	for hash := range s.persistentPreimagesDirty {
-		s.persistentPreimagesPending[hash] = struct{}{}
-	}
-	if len(s.persistentPreimagesDirty) > 0 {
-		s.persistentPreimagesDirty = make(map[common.Hash]struct{})
-	}
 
 	addressesToPrefetch := make([][]byte, 0, len(s.journal.dirties))
 	for addr := range s.journal.dirties {
@@ -1303,14 +1115,6 @@ func (s *StateDB) CommitWithConcrete(concretePrecompiles concrete.PrecompileMap,
 		if err := codeWriter.Write(); err != nil {
 			log.Crit("Failed to commit dirty codes", "error", err)
 		}
-	}
-	for hash := range s.persistentPreimagesPending {
-		s.persistentPreimagesRead[hash] = struct{}{}
-		preimage := s.persistentPreimages[hash]
-		rawdb.WriteConcretePreimage(persistentPreimageWriter, hash, preimage)
-	}
-	if len(s.persistentPreimagesPending) > 0 {
-		s.persistentPreimagesPending = make(map[common.Hash]struct{})
 	}
 	if persistentPreimageWriter.ValueSize() > 0 {
 		if err := persistentPreimageWriter.Write(); err != nil {

@@ -302,13 +302,6 @@ func (ch accessListAddHashChange) dirtied() *common.Address {
 	return nil
 }
 
-func (ch ephemeralPreimageChange) revert(s *StateDB) {
-	delete(s.ephemeralPreimagesDirty, ch.hash)
-	if !s.hasEphemeralPreimage(ch.hash) {
-		delete(s.ephemeralPreimages, ch.hash)
-	}
-}
-
 func (ch ephemeralPreimageChange) dirtied() *common.Address {
 	return nil
 }
@@ -319,10 +312,6 @@ func (ch ephemeralStorageChange) revert(s *StateDB) {
 
 func (ch ephemeralStorageChange) dirtied() *common.Address {
 	return nil
-}
-
-func (ch persistentPreimageChange) revert(s *StateDB) {
-	delete(s.persistentPreimagesDirty, ch.hash)
 }
 
 func (ch persistentPreimageChange) dirtied() *common.Address {

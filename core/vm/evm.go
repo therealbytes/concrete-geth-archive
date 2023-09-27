@@ -250,7 +250,6 @@ func (evm *EVM) Call(caller ContractRef, addr common.Address, input []byte, gas 
 			cc_api.EnvConfig{
 				Static:    static,
 				Ephemeral: true,
-				Preimages: true,
 				Trusted:   true,
 			},
 			evm.StateDB,
@@ -378,7 +377,6 @@ func (evm *EVM) DelegateCall(caller ContractRef, addr common.Address, input []by
 			cc_api.EnvConfig{
 				Static:    static,
 				Ephemeral: true,
-				Preimages: true,
 				Trusted:   true,
 			},
 			evm.StateDB,
@@ -448,7 +446,6 @@ func (evm *EVM) StaticCall(caller ContractRef, addr common.Address, input []byte
 			cc_api.EnvConfig{
 				Static:    static,
 				Ephemeral: true,
-				Preimages: true,
 				Trusted:   true,
 			},
 			evm.StateDB,
