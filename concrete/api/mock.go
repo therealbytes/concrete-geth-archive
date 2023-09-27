@@ -48,10 +48,8 @@ func (m *mockStateDB) AddressInAccessList(addr common.Address) bool { return fal
 func (m *mockStateDB) SlotInAccessList(addr common.Address, slot common.Hash) (bool, bool) {
 	return false, false
 }
-func (m *mockStateDB) HashInAccessList(hash common.Hash) bool                    { return false }
 func (m *mockStateDB) AddAddressToAccessList(addr common.Address)                {}
 func (m *mockStateDB) AddSlotToAccessList(addr common.Address, slot common.Hash) {}
-func (m *mockStateDB) AddHashToAccessList(hash common.Hash)                      {}
 func (m *mockStateDB) GetCode(addr common.Address) []byte                        { return []byte{} }
 func (m *mockStateDB) GetCodeSize(addr common.Address) int                       { return 0 }
 func (m *mockStateDB) GetCodeHash(addr common.Address) common.Hash               { return common.Hash{} }

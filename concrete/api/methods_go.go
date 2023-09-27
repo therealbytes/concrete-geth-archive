@@ -56,6 +56,11 @@ func newEnvironmentMethods() JumpTable {
 			dynamicGas:  gasKeccak256,
 			static:      true,
 		},
+		UseGas_OpCode: {
+			execute:    opUseGas,
+			dynamicGas: gasUseGas,
+			static:     true,
+		},
 		EphemeralStore_OpCode: {
 			execute:     opEphemeralStore,
 			constantGas: params.WarmStorageReadCostEIP2929,
@@ -170,11 +175,6 @@ func newEnvironmentMethods() JumpTable {
 			constantGas: 0,
 			static:      true,
 		},
-		UseGas_OpCode: {
-			execute:     opUseGas,
-			constantGas: GasQuickStep,
-			static:      true,
-		},
 		StorageStore_OpCode: {
 			execute:    opStorageStore,
 			dynamicGas: gasStorageStore,
@@ -265,14 +265,6 @@ func gasAccountAccessMinusWarm(env *Env, address common.Address) (uint64, error)
 	return 0, nil
 }
 
-func gasHashAccess(env *Env, hash common.Hash) (uint64, error) {
-	if !env.statedb.HashInAccessList(hash) {
-		env.statedb.AddHashToAccessList(hash)
-		return params.ColdSloadCostEIP2929, nil
-	}
-	return params.WarmStorageReadCostEIP2929, nil
-}
-
 func gasExternalCall(env *Env, address common.Address, callCost uint64) (uint64, error) {
 	baseCost, err := gasAccountAccessMinusWarm(env, address)
 	if err != nil {
@@ -342,6 +334,24 @@ func gasKeccak256(env *Env, args [][]byte) (uint64, error) {
 func opKeccak256(env *Env, args [][]byte) ([][]byte, error) {
 	hash := crypto.Keccak256(args[0])
 	return [][]byte{hash}, nil
+}
+
+func gasUseGas(env *Env, args [][]byte) (uint64, error) {
+	if len(args) != 1 {
+		return 0, ErrInvalidInput
+	}
+	if len(args[0]) != 8 {
+		return 0, ErrInvalidInput
+	}
+	gas := utils.BytesToUint64(args[0])
+	if ok := env.useGas(gas); !ok {
+		return 0, ErrOutOfGas
+	}
+	return 0, nil
+}
+
+func opUseGas(env *Env, args [][]byte) ([][]byte, error) {
+	return nil, nil
 }
 
 func opEphemeralStore(env *Env, args [][]byte) ([][]byte, error) {
@@ -594,20 +604,6 @@ func opGetCode(env *Env, args [][]byte) ([][]byte, error) {
 
 func opGetCodeSize(env *Env, args [][]byte) ([][]byte, error) {
 	return nil, ErrInvalidOpCode
-}
-
-func opUseGas(env *Env, args [][]byte) ([][]byte, error) {
-	if len(args) != 1 {
-		return nil, ErrInvalidInput
-	}
-	if len(args[0]) != 8 {
-		return nil, ErrInvalidInput
-	}
-	gas := utils.BytesToUint64(args[0])
-	if ok := env.useGas(gas); !ok {
-		return nil, ErrOutOfGas
-	}
-	return nil, nil
 }
 
 func gasStorageStore(env *Env, args [][]byte) (uint64, error) {

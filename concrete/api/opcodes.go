@@ -35,6 +35,7 @@ const (
 	TimeNow_OpCode OpCode = 0x0d
 	// Utils
 	Keccak256_OpCode OpCode = 0x10
+	UseGas_OpCode    OpCode = 0x50
 	// Ephemeral
 	EphemeralStore_OpCode OpCode = 0x20
 	EphemeralLoad_OpCode  OpCode = 0x21
@@ -60,7 +61,6 @@ const (
 	GetCode_OpCode            OpCode = 0x42
 	GetCodeSize_OpCode        OpCode = 0x43
 	// Internal writes
-	UseGas_OpCode       OpCode = 0x50
 	StorageStore_OpCode OpCode = 0x51
 	Log_OpCode          OpCode = 0x52
 	// External reads

@@ -268,7 +268,6 @@ func (s *StateDB) FinaliseConcretePrecompiles(concretePrecompiles concrete.Preco
 			cc_api.EnvConfig{
 				Static:    true,
 				Ephemeral: true,
-				Preimages: true,
 				Trusted:   true,
 			},
 			s,
@@ -292,7 +291,6 @@ func (s *StateDB) CommitConcretePrecompiles(concretePrecompiles concrete.Precomp
 			cc_api.EnvConfig{
 				Static:    true,
 				Ephemeral: true,
-				Preimages: true,
 				Trusted:   true,
 			},
 			s,
@@ -1261,12 +1259,6 @@ func (s *StateDB) AddSlotToAccessList(addr common.Address, slot common.Hash) {
 	}
 }
 
-func (s *StateDB) AddHashToAccessList(hash common.Hash) {
-	if s.accessList.AddHash(hash) {
-		s.journal.append(accessListAddHashChange{&hash})
-	}
-}
-
 // AddressInAccessList returns true if the given address is in the access list.
 func (s *StateDB) AddressInAccessList(addr common.Address) bool {
 	return s.accessList.ContainsAddress(addr)
@@ -1275,10 +1267,6 @@ func (s *StateDB) AddressInAccessList(addr common.Address) bool {
 // SlotInAccessList returns true if the given (address, slot)-tuple is in the access list.
 func (s *StateDB) SlotInAccessList(addr common.Address, slot common.Hash) (addressPresent bool, slotPresent bool) {
 	return s.accessList.Contains(addr, slot)
-}
-
-func (s *StateDB) HashInAccessList(hash common.Hash) bool {
-	return s.accessList.ContainsHash(hash)
 }
 
 // convertAccountSet converts a provided account set from address keyed to hash keyed.

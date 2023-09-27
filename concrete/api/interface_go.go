@@ -33,9 +33,6 @@ type StateDB interface {
 	SlotInAccessList(addr common.Address, slot common.Hash) (addressOk bool, slotOk bool)
 	AddAddressToAccessList(addr common.Address)
 	AddSlotToAccessList(addr common.Address, slot common.Hash)
-	// Access list -- Concrete
-	AddHashToAccessList(hash common.Hash)
-	HashInAccessList(hash common.Hash) bool
 	// Code
 	GetCode(common.Address) []byte
 	GetCodeSize(common.Address) int
