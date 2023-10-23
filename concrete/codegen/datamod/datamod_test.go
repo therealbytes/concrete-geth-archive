@@ -41,7 +41,7 @@ func TestBadDatamod(t *testing.T) {
 				JSON:    dirPath + file.Name(),
 				Out:     "./",
 				Package: "test",
-			}, true)
+			}, true, false)
 			if err == nil {
 				t.Fatalf("Expected error but got nil")
 			}

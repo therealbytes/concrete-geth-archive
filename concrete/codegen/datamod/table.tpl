@@ -13,6 +13,7 @@ import (
 
 // Reference imports to suppress errors if they are not used.
 var (
+	_ = crypto.Keccak256
 	_ = big.NewInt
 	_ = common.Big1
 	_ = codec.EncodeAddress
@@ -27,12 +28,12 @@ func {{.TableStructName}}DefaultKey() []byte {
 }
 
 type {{.RowStructName}} struct {
-	lib.DatastoreStruct
+	lib.IDatastoreStruct
 }
 
 func New{{.RowStructName}}(dsSlot lib.DatastoreSlot) *{{.RowStructName}} {
 	sizes := {{.SizesStr}}
-	return &{{.RowStructName}}{*lib.NewDatastoreStruct(dsSlot, sizes)}
+	return &{{.RowStructName}}{lib.NewDatastoreStruct(dsSlot, sizes)}
 }
 
 func (v *{{$.RowStructName}}) Get() (
@@ -83,7 +84,6 @@ func (v *{{$.RowStructName}}) Get{{.Title}}() *{{.Type.GoType}} {
 }
 {{ end}}
 {{- end}}
-{{- if .Schema.Keys }}
 type {{.TableStructName}} struct {
 	dsSlot lib.DatastoreSlot
 }
@@ -97,6 +97,7 @@ func New{{.TableStructName}}FromSlot(dsSlot lib.DatastoreSlot) *{{.TableStructNa
 	return &{{.TableStructName}}{dsSlot}
 }
 
+{{- if .Schema.Keys }}
 func (m *{{.TableStructName}}) Get(
 {{- range .Schema.Keys }}
 	{{.Name}} {{.Type.GoType}},
@@ -110,14 +111,7 @@ func (m *{{.TableStructName}}) Get(
 	return New{{.RowStructName}}(dsSlot)
 }
 {{- else }}
-type {{.TableStructName}} = {{.RowStructName}}
-
-func New{{.TableStructName}}(ds lib.Datastore) *{{.RowStructName}} {
-	dsSlot := ds.Get({{.TableStructName}}DefaultKey())
-	return New{{.RowStructName}}(dsSlot)
-}
-
-func New{{.TableStructName}}FromSlot(dsSlot lib.DatastoreSlot) *{{.RowStructName}} {
-	return New{{.RowStructName}}(dsSlot)
+func (m *{{.TableStructName}}) Get() *{{.RowStructName}} {
+	return New{{.RowStructName}}(m.dsSlot)
 }
 {{- end }}

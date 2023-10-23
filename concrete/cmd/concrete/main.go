@@ -95,6 +95,7 @@ func main() {
 	cmdDatamod.Flags().String("out", "./", "dir to write the generated files to")
 	cmdDatamod.Flags().String("pkg", "main", "package name for the generated files")
 	cmdDatamod.Flags().Bool("table-type-experimental", false, "whether to enable experimental table value type")
+	cmdDatamod.Flags().Bool("more-experimental", false, "whether to generate extra wrappers e.g. hooks")
 	rootCmd.AddCommand(cmdDatamod)
 
 	if err := rootCmd.Execute(); err != nil {
@@ -176,6 +177,8 @@ func runDatamod(cmd *cobra.Command, args []string) {
 	checkErr(err)
 	allowTableTypes, err := cmd.Flags().GetBool("table-type-experimental")
 	checkErr(err)
+	genMore, err := cmd.Flags().GetBool("more-experimental")
+	checkErr(err)
 
 	jsonIsDir, err := isDir(jsonPath)
 	checkErr(err)
@@ -197,7 +200,7 @@ func runDatamod(cmd *cobra.Command, args []string) {
 
 	fmt.Println("Generating data model wrappers for:", jsonPath)
 
-	err = datamod.GenerateDataModel(config, allowTableTypes)
+	err = datamod.GenerateDataModel(config, allowTableTypes, genMore)
 	checkErr(err)
 
 	fmt.Println("Data model wrappers generated successfully.\nFiles written to:", outPath)

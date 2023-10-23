@@ -31,6 +31,9 @@ import (
 //go:embed table.tpl
 var tableTpl string
 
+//go:embed table_more.tpl
+var tableTplMore string
+
 type FieldSchema struct {
 	Name  string
 	Title string
@@ -141,13 +144,25 @@ func unmarshalTableSchemas(jsonContent []byte, allowTableTypes bool) ([]TableSch
 	return tableSchemas, nil
 }
 
+func executeTemplate(tpl *template.Template, data map[string]interface{}, outPath string) error {
+	var buf bytes.Buffer
+	if err := tpl.Execute(&buf, data); err != nil {
+		return err
+	}
+	err := os.WriteFile(outPath, buf.Bytes(), 0644)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 type Config struct {
 	JSON    string
 	Out     string
 	Package string
 }
 
-func GenerateDataModel(config Config, allowTableTypes bool) error {
+func GenerateDataModel(config Config, allowTableTypes bool, genMore bool) error {
 	if !isValidName(config.Package) {
 		return fmt.Errorf("invalid package name: %s", config.Package)
 	}
@@ -163,10 +178,6 @@ func GenerateDataModel(config Config, allowTableTypes bool) error {
 
 	funcMap := template.FuncMap{
 		"sub": func(a, b int) int { return a - b },
-	}
-	tpl, err := template.New("table").Funcs(funcMap).Parse(tableTpl)
-	if err != nil {
-		return err
 	}
 
 	for _, schema := range schemas {
@@ -192,15 +203,20 @@ func GenerateDataModel(config Config, allowTableTypes bool) error {
 			"SizesStr":        sizesStr,
 		}
 
-		var buf bytes.Buffer
-		if err := tpl.Execute(&buf, data); err != nil {
-			return err
-		}
-		filename := camelToSnake(lowerFirstLetter(tableName)) + ".go"
-		outPath := filepath.Join(config.Out, filename)
-		err := os.WriteFile(outPath, buf.Bytes(), 0644)
+		filename := camelToSnake(lowerFirstLetter(tableName))
+
+		tpl, err := template.New("table").Funcs(funcMap).Parse(tableTpl)
 		if err != nil {
 			return err
+		}
+		executeTemplate(tpl, data, filepath.Join(config.Out, filename+".go"))
+
+		if genMore {
+			tplMore, err := template.New("table_more").Funcs(funcMap).Parse(tableTplMore)
+			if err != nil {
+				return err
+			}
+			executeTemplate(tplMore, data, filepath.Join(config.Out, filename+"_more.go"))
 		}
 	}
 	return nil

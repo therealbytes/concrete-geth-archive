@@ -19,12 +19,22 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 )
 
+type IDatastoreStruct interface {
+	GetField(index int) []byte
+	SetField(index int, data []byte)
+	GetField_slot(index int) DatastoreSlot
+	GetField_bytes(index int) []byte
+	SetField_bytes(index int, data []byte)
+}
+
 type DatastoreStruct struct {
 	store   DatastoreSlot
 	arr     SlotArray
 	offsets []int
 	sizes   []int
 }
+
+var _ IDatastoreStruct = (*DatastoreStruct)(nil)
 
 func NewDatastoreStruct(store DatastoreSlot, sizes []int) *DatastoreStruct {
 	var (
@@ -99,4 +109,24 @@ func (s *DatastoreStruct) GetField_bytes(index int) []byte {
 func (s *DatastoreStruct) SetField_bytes(index int, data []byte) {
 	slotRef := s.GetField_slot(index)
 	slotRef.SetBytes(data)
+}
+
+type DatastoreStructWithHooks struct {
+	IDatastoreStruct
+	OnSetField func(index int, data []byte)
+}
+
+var _ IDatastoreStruct = (*DatastoreStructWithHooks)(nil)
+
+func NewDatastoreStructWithHooks(dsStruct IDatastoreStruct) *DatastoreStructWithHooks {
+	return &DatastoreStructWithHooks{
+		IDatastoreStruct: dsStruct,
+	}
+}
+
+func (s *DatastoreStructWithHooks) SetField(index int, data []byte) {
+	s.IDatastoreStruct.SetField(index, data)
+	if s.OnSetField != nil {
+		s.OnSetField(index, data)
+	}
 }
