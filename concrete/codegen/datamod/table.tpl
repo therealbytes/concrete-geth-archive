@@ -38,7 +38,7 @@ func New{{.RowStructName}}(dsSlot lib.DatastoreSlot) *{{.RowStructName}} {
 
 func (v *{{$.RowStructName}}) Get() (
 {{- range .Schema.Values }}
-	{{if eq .Type.Type 2}}*{{end}}{{.Type.GoType}},
+	{{ .Name }} {{if eq .Type.Type 2}}*{{end}}{{.Type.GoType}},
 {{- end }}
 ) {
 	return {{ range .Schema.Values }}
