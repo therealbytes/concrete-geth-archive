@@ -35,10 +35,10 @@ var tableTpl string
 var tableTplMore string
 
 type FieldSchema struct {
-	Name  string
-	Title string
-	Index int
-	Type  FieldType
+	Name       string
+	PascalCase string
+	Index      int
+	Type       FieldType
 }
 
 type TableSchema struct {
@@ -56,14 +56,14 @@ func newFieldSchema(name string, index int, typeStr string) (FieldSchema, error)
 		return FieldSchema{}, fmt.Errorf("invalid type '%s' for field '%s': %w", typeStr, name, err)
 	}
 	return FieldSchema{
-		Name:  lowerFirstLetter(name),
-		Title: upperFirstLetter(name),
-		Index: index,
-		Type:  fieldType,
+		Name:       lowerFirstLetter(name),
+		PascalCase: upperFirstLetter(name),
+		Index:      index,
+		Type:       fieldType,
 	}, nil
 }
 
-func unmarshalTableSchemas(jsonContent []byte, allowTableTypes bool) ([]TableSchema, error) {
+func UnmarshalTableSchemas(jsonContent []byte, allowTableTypes bool) ([]TableSchema, error) {
 	jsonSchemas := orderedmap.New()
 	err := json.Unmarshal(jsonContent, &jsonSchemas)
 	if err != nil {
@@ -144,7 +144,7 @@ func unmarshalTableSchemas(jsonContent []byte, allowTableTypes bool) ([]TableSch
 	return tableSchemas, nil
 }
 
-func executeTemplate(tpl *template.Template, data map[string]interface{}, outPath string) error {
+func ExecuteTemplate(tpl *template.Template, data map[string]interface{}, outPath string) error {
 	var buf bytes.Buffer
 	if err := tpl.Execute(&buf, data); err != nil {
 		return err
@@ -171,7 +171,7 @@ func GenerateDataModel(config Config, allowTableTypes bool, genMore bool) error 
 	if err != nil {
 		return err
 	}
-	schemas, err := unmarshalTableSchemas(jsonContent, allowTableTypes)
+	schemas, err := UnmarshalTableSchemas(jsonContent, allowTableTypes)
 	if err != nil {
 		return err
 	}
@@ -209,14 +209,20 @@ func GenerateDataModel(config Config, allowTableTypes bool, genMore bool) error 
 		if err != nil {
 			return err
 		}
-		executeTemplate(tpl, data, filepath.Join(config.Out, filename+".go"))
+		err = ExecuteTemplate(tpl, data, filepath.Join(config.Out, filename+".go"))
+		if err != nil {
+			return err
+		}
 
 		if genMore {
 			tplMore, err := template.New("table_more").Funcs(funcMap).Parse(tableTplMore)
 			if err != nil {
 				return err
 			}
-			executeTemplate(tplMore, data, filepath.Join(config.Out, filename+"_more.go"))
+			err = ExecuteTemplate(tplMore, data, filepath.Join(config.Out, filename+"_more.go"))
+			if err != nil {
+				return err
+			}
 		}
 	}
 	return nil

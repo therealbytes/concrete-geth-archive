@@ -68,17 +68,17 @@ func (v *{{$.RowStructName}}) Set(
 }
 {{range .Schema.Values}}
 {{- if lt .Type.Type 2 }}
-func (v *{{$.RowStructName}}) Get{{.Title}}() {{.Type.GoType}} {
+func (v *{{$.RowStructName}}) Get{{.PascalCase}}() {{.Type.GoType}} {
 	data := {{if eq .Type.Type 0}}v.GetField{{else}}v.GetField_bytes{{end}}({{.Index}})
 	return codec.{{.Type.DecodeFunc}}({{.Type.Size}}, data)
 }
 
-func (v *{{$.RowStructName}}) Set{{.Title}}(value {{.Type.GoType}}) {
+func (v *{{$.RowStructName}}) Set{{.PascalCase}}(value {{.Type.GoType}}) {
 	data := codec.{{.Type.EncodeFunc}}({{.Type.Size}}, value)
 	{{if eq .Type.Type 0}}v.SetField{{else}}v.SetField_bytes{{end}}({{.Index}}, data)
 }
 {{ else }}
-func (v *{{$.RowStructName}}) Get{{.Title}}() *{{.Type.GoType}} {
+func (v *{{$.RowStructName}}) Get{{.PascalCase}}() *{{.Type.GoType}} {
 	dsSlot := v.GetField_slot({{.Index}})
 	return New{{.Type.GoType}}FromSlot(dsSlot)
 }
