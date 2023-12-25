@@ -23,6 +23,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"sort"
 	"strings"
 	"text/template"
 
@@ -145,6 +146,11 @@ func generateSolidityLibrary(ABI abi.ABI, cABI customABI, config Config) (string
 		}
 		data["Methods"] = append(data["Methods"].([]map[string]interface{}), methodData)
 	}
+
+	methodsSlice := data["Methods"].([]map[string]interface{})
+	sort.Slice(methodsSlice, func(i, j int) bool {
+		return methodsSlice[i]["Name"].(string) < methodsSlice[j]["Name"].(string)
+	})
 
 	var buf bytes.Buffer
 	if err := tmpl.Execute(&buf, data); err != nil {
