@@ -40,6 +40,7 @@ import (
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/metrics"
 	"github.com/ethereum/go-ethereum/node"
+	"github.com/ethereum/go-ethereum/rpc"
 
 	// Force-load the tracer engines to trigger registration
 	_ "github.com/ethereum/go-ethereum/eth/tracers/js"
@@ -343,7 +344,15 @@ func geth(ctx *cli.Context) error {
 	return nil
 }
 
-func newConcreteGeth(concreteRegistry concrete.PrecompileRegistry) func(ctx *cli.Context) error {
+type ConcreteRPC struct {
+	Namespace     string      // namespace under which the rpc methods of Service are exposed
+	Service       interface{} // receiver instance which holds the methods
+	Authenticated bool        // whether the api should only be available behind authentication.
+}
+
+type ConcreteRPCConstructor func(backend ethapi.Backend) ConcreteRPC
+
+func newConcreteGeth(concreteRegistry concrete.PrecompileRegistry, concreteApis []ConcreteRPCConstructor) func(ctx *cli.Context) error {
 	return func(ctx *cli.Context) error {
 		if args := ctx.Args().Slice(); len(args) > 0 {
 			return fmt.Errorf("invalid command: %q", args[0])
@@ -354,7 +363,14 @@ func newConcreteGeth(concreteRegistry concrete.PrecompileRegistry) func(ctx *cli
 		defer stack.Close()
 
 		backend.SetConcrete(concreteRegistry)
-
+		for _, constructor := range concreteApis {
+			rpcObj := constructor(backend)
+			stack.RegisterAPIs([]rpc.API{{
+				Namespace:     rpcObj.Namespace,
+				Authenticated: rpcObj.Authenticated,
+				Service:       rpcObj.Service,
+			}})
+		}
 		startNode(ctx, stack, backend, false)
 		stack.Wait()
 		return nil
@@ -363,7 +379,7 @@ func newConcreteGeth(concreteRegistry concrete.PrecompileRegistry) func(ctx *cli
 
 func newConcreteGethApp(concreteRegistry concrete.PrecompileRegistry) *cli.App {
 	ccApp := flags.NewApp("the concrete-geth command line interface")
-	ccApp.Action = newConcreteGeth(concreteRegistry)
+	ccApp.Action = newConcreteGeth(concreteRegistry, nil)
 	ccApp.Copyright = "Copyright 2013-2023 The go-ethereum Authors & 2023 The concrete-geth Authors"
 	ccApp.Commands = app.Commands
 	ccApp.Flags = app.Flags
