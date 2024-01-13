@@ -30,6 +30,7 @@ import (
 	"github.com/ethereum/go-ethereum/cmd/utils"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/concrete"
+	concrete_rpc "github.com/ethereum/go-ethereum/concrete/rpc"
 	"github.com/ethereum/go-ethereum/console/prompt"
 	"github.com/ethereum/go-ethereum/eth"
 	"github.com/ethereum/go-ethereum/eth/downloader"
@@ -336,7 +337,7 @@ func geth(ctx *cli.Context) error {
 	}
 
 	prepare(ctx)
-	stack, backend := makeFullNode(ctx)
+	stack, backend, _ := makeFullNode(ctx)
 	defer stack.Close()
 
 	startNode(ctx, stack, backend, false)
@@ -344,27 +345,19 @@ func geth(ctx *cli.Context) error {
 	return nil
 }
 
-type ConcreteRPC struct {
-	Namespace     string      // namespace under which the rpc methods of Service are exposed
-	Service       interface{} // receiver instance which holds the methods
-	Authenticated bool        // whether the api should only be available behind authentication.
-}
-
-type ConcreteRPCConstructor func(backend ethapi.Backend) ConcreteRPC
-
-func newConcreteGeth(concreteRegistry concrete.PrecompileRegistry, concreteApis []ConcreteRPCConstructor) func(ctx *cli.Context) error {
+func newConcreteGeth(concreteRegistry concrete.PrecompileRegistry, concreteApis []concrete_rpc.ConcreteRPCConstructor) func(ctx *cli.Context) error {
 	return func(ctx *cli.Context) error {
 		if args := ctx.Args().Slice(); len(args) > 0 {
 			return fmt.Errorf("invalid command: %q", args[0])
 		}
 
 		prepare(ctx)
-		stack, backend := makeFullNode(ctx)
+		stack, backend, eth := makeFullNode(ctx)
 		defer stack.Close()
 
 		backend.SetConcrete(concreteRegistry)
 		for _, constructor := range concreteApis {
-			rpcObj := constructor(backend)
+			rpcObj := constructor(eth)
 			stack.RegisterAPIs([]rpc.API{{
 				Namespace:     rpcObj.Namespace,
 				Authenticated: rpcObj.Authenticated,
