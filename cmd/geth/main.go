@@ -355,24 +355,32 @@ func newConcreteGeth(concreteRegistry concrete.PrecompileRegistry, concreteApis 
 		stack, backend, eth := makeFullNode(ctx)
 		defer stack.Close()
 
-		backend.SetConcrete(concreteRegistry)
+		// Construct Concrete APIs
+		ccApis := make([]rpc.API, 0)
 		for _, constructor := range concreteApis {
 			rpcObj := constructor(eth)
-			stack.RegisterAPIs([]rpc.API{{
+			ccApis = append(ccApis, rpc.API{
 				Namespace:     rpcObj.Namespace,
 				Authenticated: rpcObj.Authenticated,
 				Service:       rpcObj.Service,
-			}})
+			})
 		}
+
+		// Register Concrete APIs
+		stack.RegisterAPIs(ccApis)
+
+		// Set Concrete precompiles
+		backend.SetConcrete(concreteRegistry)
+
 		startNode(ctx, stack, backend, false)
 		stack.Wait()
 		return nil
 	}
 }
 
-func newConcreteGethApp(concreteRegistry concrete.PrecompileRegistry) *cli.App {
+func newConcreteGethApp(concreteRegistry concrete.PrecompileRegistry, concreteApis []concrete_rpc.ConcreteRPCConstructor) *cli.App {
 	ccApp := flags.NewApp("the concrete-geth command line interface")
-	ccApp.Action = newConcreteGeth(concreteRegistry, nil)
+	ccApp.Action = newConcreteGeth(concreteRegistry, concreteApis)
 	ccApp.Copyright = "Copyright 2013-2023 The go-ethereum Authors & 2023 The concrete-geth Authors"
 	ccApp.Commands = app.Commands
 	ccApp.Flags = app.Flags
@@ -381,8 +389,8 @@ func newConcreteGethApp(concreteRegistry concrete.PrecompileRegistry) *cli.App {
 	return ccApp
 }
 
-func NewConcreteGethApp(concreteRegistry concrete.PrecompileRegistry) *cli.App {
-	return newConcreteGethApp(concreteRegistry)
+func NewConcreteGethApp(concreteRegistry concrete.PrecompileRegistry, concreteApis []concrete_rpc.ConcreteRPCConstructor) *cli.App {
+	return newConcreteGethApp(concreteRegistry, concreteApis)
 }
 
 // startNode boots up the system node and all registered protocols, after which
