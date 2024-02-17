@@ -766,7 +766,8 @@ func (b *SimulatedBackend) SendTransaction(ctx context.Context, tx *types.Transa
 		return fmt.Errorf("invalid transaction nonce: got %d, want %d", tx.Nonce(), nonce)
 	}
 	// Include tx in chain
-	blocks, receipts := core.GenerateChain(b.config, block, b.consensus, b.database, 1, func(number int, block *core.BlockGen) {
+	concreteRegistry := b.blockchain.Concrete()
+	blocks, receipts := core.GenerateChainWithConcrete(b.config, block, b.consensus, b.database, 1, concreteRegistry, func(number int, block *core.BlockGen) {
 		for _, tx := range b.pendingBlock.Transactions() {
 			block.AddTxWithChain(b.blockchain, tx)
 		}
