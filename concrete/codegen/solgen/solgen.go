@@ -50,19 +50,6 @@ func isValidSolidityContractName(name string) bool {
 	return re.MatchString(name) && len(strings.TrimSpace(name)) == len(name)
 }
 
-func formatPath(path string) string {
-	if len(path) == 0 {
-		return path
-	}
-	if filepath.IsAbs(path) {
-		return path
-	} else if path[0] == '.' {
-		return path
-	} else {
-		return "./" + path
-	}
-}
-
 func getTypeString(internalType string, arg abi.Argument) string {
 	if strings.HasPrefix(internalType, "struct ") {
 		return strings.TrimPrefix(internalType, "struct ")
@@ -97,20 +84,11 @@ func generateSolidityLibrary(ABI abi.ABI, cABI customABI, config Config) (string
 		return "", fmt.Errorf("invalid contract name: '%s'", config.Name)
 	}
 
-	var importPath string
-	if len(config.Sol) > 0 {
-		importPath, err = filepath.Rel(filepath.Dir(config.Out), config.Sol)
-		if err != nil {
-			return "", err
-		}
-		importPath = formatPath(importPath)
-	}
-
 	data := map[string]interface{}{
 		"Name":        config.Name,
 		"Address":     config.Address.Hex(),
 		"Methods":     []map[string]interface{}{},
-		"ImportPaths": []string{importPath},
+		"ImportPaths": []string{config.Sol},
 	}
 
 	for mIdx, method := range ABI.Methods {
