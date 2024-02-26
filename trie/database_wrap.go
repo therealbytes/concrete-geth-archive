@@ -21,9 +21,9 @@ import (
 	"runtime"
 	"time"
 
-	"github.com/VictoriaMetrics/fastcache"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethdb"
+	"github.com/ethereum/go-ethereum/fastcache"
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/trie/triedb/hashdb"
 	"github.com/ethereum/go-ethereum/trie/trienode"
@@ -67,17 +67,17 @@ type backend interface {
 // types of node backend as an entrypoint. It's responsible for all interactions
 // relevant with trie nodes and node preimages.
 type Database struct {
-	config    *Config          // Configuration for trie database
-	diskdb    ethdb.Database   // Persistent database to store the snapshot
-	cleans    *fastcache.Cache // Megabytes permitted using for read caches
-	preimages *preimageStore   // The store for caching preimages
-	backend   backend          // The backend for managing trie nodes
+	config    *Config         // Configuration for trie database
+	diskdb    ethdb.Database  // Persistent database to store the snapshot
+	cleans    fastcache.Cache // Megabytes permitted using for read caches
+	preimages *preimageStore  // The store for caching preimages
+	backend   backend         // The backend for managing trie nodes
 }
 
 // prepare initializes the database with provided configs, but the
 // database backend is still left as nil.
 func prepare(diskdb ethdb.Database, config *Config) *Database {
-	var cleans *fastcache.Cache
+	var cleans fastcache.Cache
 	if config != nil && config.Cache > 0 {
 		if config.Journal == "" {
 			cleans = fastcache.New(config.Cache * 1024 * 1024)
