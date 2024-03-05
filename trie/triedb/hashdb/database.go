@@ -75,7 +75,7 @@ type Database struct {
 	diskdb   ethdb.Database // Persistent storage for matured trie nodes
 	resolver ChildResolver  // The handler to resolve children of nodes
 
-	cleans  fastcache.Cache             // GC friendly memory cache of clean node RLPs
+	cleans  *fastcache.Cache            // GC friendly memory cache of clean node RLPs
 	dirties map[common.Hash]*cachedNode // Data and references relationships of dirty trie nodes
 	oldest  common.Hash                 // Oldest tracked node, flush-list head
 	newest  common.Hash                 // Newest tracked node, flush-list tail
@@ -120,7 +120,7 @@ func (n *cachedNode) forChildren(resolver ChildResolver, onChild func(hash commo
 }
 
 // New initializes the hash-based node database.
-func New(diskdb ethdb.Database, cleans fastcache.Cache, resolver ChildResolver) *Database {
+func New(diskdb ethdb.Database, cleans *fastcache.Cache, resolver ChildResolver) *Database {
 	return &Database{
 		diskdb:   diskdb,
 		resolver: resolver,
