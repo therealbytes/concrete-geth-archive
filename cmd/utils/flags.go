@@ -34,7 +34,6 @@ import (
 	"strings"
 	"time"
 
-	pcsclite "github.com/gballet/go-libpcsclite"
 	gopsutil "github.com/shirou/gopsutil/mem"
 	"github.com/urfave/cli/v2"
 
@@ -127,9 +126,9 @@ var (
 		Category: flags.AccountCategory,
 	}
 	SmartCardDaemonPathFlag = &cli.StringFlag{
-		Name:     "pcscdpath",
-		Usage:    "Path to the smartcard daemon (pcscd) socket file",
-		Value:    pcsclite.PCSCDSockName,
+		Name:  "pcscdpath",
+		Usage: "Path to the smartcard daemon (pcscd) socket file",
+		// Value:    pcsclite.PCSCDSockName,
 		Category: flags.AccountCategory,
 	}
 	NetworkIdFlag = &cli.Uint64Flag{

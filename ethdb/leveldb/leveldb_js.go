@@ -19,9 +19,9 @@
 
 package leveldb
 
-type Database struct{}
+import "github.com/ethereum/go-ethereum/ethdb"
 
-func New(file string, cache int, handles int, namespace string, readonly bool) (*Database, error) {
+func New(file string, cache int, handles int, namespace string, readonly bool) (ethdb.KeyValueStore, error) {
 	panic("not supported")
 	return nil, nil
 }

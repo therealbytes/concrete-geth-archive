@@ -30,6 +30,9 @@
 //    You can connect to a paired wallet with `personal.openWallet(URI, PIN)`.
 // 4. Interact with the wallet as normal.
 
+//go:build !js
+// +build !js
+
 package scwallet
 
 import (
